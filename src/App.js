@@ -22,16 +22,18 @@ import {
 
 
 // --- Firebase Configuration ---
-// IMPORTANT: Replace this with your own Firebase project configuration.
+// IMPORTANT: Use environment variables for API keys for security.
+// Ensure you have a .env file with REACT_APP_FIREBASE_API_KEY
 const firebaseConfig = {
-  apiKey: "AIzaSyA5Ap7DWw6eVVvMVCFU8J8Mb7XyN80IF70",
+  apiKey: process.env.REACT_APP_FIREBASE_API_KEY,
   authDomain: "ecommerce-cb55d.firebaseapp.com",
   projectId: "ecommerce-cb55d",
   storageBucket: "ecommerce-cb55d.firebasestorage.app",
   messagingSenderId: "65795253567",
   appId: "1:65795253567:web:a397ac4b9753eff74c9f8a",
   measurementId: "G-LSX5BKFP9C"
-};
+};  
+
 
 // --- SVG Icon Components ---
 const SearchIcon = () => (<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>);
@@ -46,19 +48,19 @@ const HeartIcon = ({ filled }) => (<svg xmlns="http://www.w3.org/2000/svg" width
 // --- Page Components ---
 const HomePage = ({ products, onAddToCart, onProductSelect, onToggleWishlist, wishlist, onQuickView }) => (
     <>
-        <section className="glass-card rounded-3xl p-8 md:p-12 flex flex-col md:flex-row items-center gap-8 mb-16">
+        <section className="glass-card rounded-3xl p-6 md:p-12 flex flex-col md:flex-row items-center gap-8 mb-12 md:mb-16">
             <div className="md:w-1/2 text-center md:text-left">
-                <h1 className="text-4xl md:text-6xl font-bold leading-tight mb-4">Discover Your Style</h1>
-                <p className="text-lg text-gray-200 mb-8">Browse our curated collection of fashion, electronics, and more. Quality products for your modern life.</p>
+                <h1 className="text-3xl sm:text-4xl md:text-6xl font-bold leading-tight mb-4">Discover Your Style</h1>
+                <p className="text-base sm:text-lg text-gray-200 mb-8">Browse our curated collection of fashion, electronics, and more. Quality products for your modern life.</p>
                 <button onClick={() => document.getElementById('featured-products')?.scrollIntoView({ behavior: 'smooth' })} className="bg-white/90 text-black font-bold py-3 px-8 rounded-full hover:bg-white transition-transform duration-300 inline-block transform hover:scale-105">Shop Collection</button>
             </div>
-            <div className="md:w-1/2 p-4 bg-white/10 rounded-2xl">
-                 {products.length > 0 && (
+            <div className="md:w-1/2 p-4 bg-white/10 rounded-2xl w-full">
+                 {products.length > 0 && products[4] && (
                     <div className="relative group cursor-pointer" onClick={() => onProductSelect(products[4])}>
-                        <img src={products[4]?.image} alt={products[4]?.title} className="rounded-2xl w-full h-auto shadow-2xl object-contain max-h-96 transform group-hover:scale-105 transition-transform duration-300" />
+                        <img src={products[4]?.image} alt={products[4]?.title} className="rounded-2xl w-full h-auto shadow-2xl object-contain max-h-96 transform group-hover:scale-110 transition-transform duration-300" />
                         <div className="absolute inset-0 bg-black/40 rounded-2xl flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-300">
                            <div className="text-center text-white p-4">
-                                <h3 className="text-2xl font-bold">{products[4]?.title}</h3>
+                                <h3 className="text-xl md:text-2xl font-bold">{products[4]?.title}</h3>
                                 <p className="text-lg mt-2">View Details</p>
                            </div>
                         </div>
@@ -68,7 +70,7 @@ const HomePage = ({ products, onAddToCart, onProductSelect, onToggleWishlist, wi
         </section>
         <section id="featured-products">
             <h2 className="text-3xl font-bold text-center mb-12">Featured Products</h2>
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 md:gap-8">
                 {products.slice(0, 8).map(product => (
                     <ProductCard key={product.id} product={product} onAddToCart={onAddToCart} onProductSelect={onProductSelect} onToggleWishlist={onToggleWishlist} isWishlisted={wishlist.some(item => item.id === product.id)} onQuickView={onQuickView} />
                 ))}
@@ -123,26 +125,26 @@ const ShopPage = ({ products, onAddToCart, onProductSelect, onToggleWishlist, wi
 
     return (
         <div>
-            <div className="glass-card rounded-3xl p-6 mb-8 flex flex-col sm:flex-row flex-wrap items-center justify-center gap-4">
-                 <select value={selectedCategory} onChange={(e) => { setSelectedCategory(e.target.value); setCurrentPage(1); }} className="bg-white/10 text-white font-semibold py-2 px-4 rounded-full transition-colors capitalize">
+            <div className="glass-card rounded-3xl p-4 md:p-6 mb-8 flex flex-col sm:flex-row flex-wrap items-center justify-center gap-4">
+                 <select value={selectedCategory} onChange={(e) => { setSelectedCategory(e.target.value); setCurrentPage(1); }} className="bg-white/10 text-white font-semibold py-2 px-4 rounded-full transition-colors capitalize w-full sm:w-auto">
                     {categories.map(cat => <option key={cat} value={cat} className="bg-gray-800">{cat}</option>)}
                 </select>
-                <button onClick={() => setSortBy('price-asc')} className="bg-white/10 hover:bg-white/20 text-white font-semibold py-2 px-6 rounded-full transition-colors">Price: Low-High</button>
-                <button onClick={() => setSortBy('price-desc')} className="bg-white/10 hover:bg-white/20 text-white font-semibold py-2 px-6 rounded-full transition-colors">Price: High-Low</button>
-                <div className="flex items-center gap-2">
-                    <input type="number" name="min" placeholder="Min Price" value={priceRange.min} onChange={handlePriceChange} className="w-24 rounded-full p-2 bg-white/20 border-none focus:ring-0 text-white placeholder-gray-300"/>
+                <button onClick={() => setSortBy('price-asc')} className="bg-white/10 hover:bg-white/20 text-white font-semibold py-2 px-6 rounded-full transition-colors w-full sm:w-auto">Price: Low-High</button>
+                <button onClick={() => setSortBy('price-desc')} className="bg-white/10 hover:bg-white/20 text-white font-semibold py-2 px-6 rounded-full transition-colors w-full sm:w-auto">Price: High-Low</button>
+                <div className="flex items-center gap-2 w-full sm:w-auto">
+                    <input type="number" name="min" placeholder="Min" value={priceRange.min} onChange={handlePriceChange} className="w-full rounded-full p-2 bg-white/20 border-none focus:ring-0 text-white placeholder-gray-300"/>
                     <span>-</span>
-                    <input type="number" name="max" placeholder="Max Price" value={priceRange.max} onChange={handlePriceChange} className="w-24 rounded-full p-2 bg-white/20 border-none focus:ring-0 text-white placeholder-gray-300"/>
+                    <input type="number" name="max" placeholder="Max" value={priceRange.max} onChange={handlePriceChange} className="w-full rounded-full p-2 bg-white/20 border-none focus:ring-0 text-white placeholder-gray-300"/>
                 </div>
                 <button onClick={handleReset} className="text-sm hover:text-gray-300">Reset</button>
             </div>
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 md:gap-8">
                 {paginatedProducts.map(product => (
                     <ProductCard key={product.id} product={product} onAddToCart={onAddToCart} onProductSelect={onProductSelect} onToggleWishlist={onToggleWishlist} isWishlisted={wishlist.some(item => item.id === product.id)} onQuickView={onQuickView} />
                 ))}
             </div>
             {totalPages > 1 && (
-                <div className="flex justify-center items-center mt-12 gap-2">
+                <div className="flex justify-center items-center mt-12 gap-2 flex-wrap">
                     {Array.from({ length: totalPages }, (_, i) => i + 1).map(page => (
                         <button key={page} onClick={() => setCurrentPage(page)} className={`w-10 h-10 rounded-full transition-colors ${currentPage === page ? 'bg-pink-500 text-white' : 'bg-white/10 hover:bg-white/20'}`}>{page}</button>
                     ))}
@@ -153,10 +155,76 @@ const ShopPage = ({ products, onAddToCart, onProductSelect, onToggleWishlist, wi
 };
 
 const ProductDetailPage = ({ product, onAddToCart, onNavigate, onToggleWishlist, isWishlisted }) => {
+    // State for Gemini API features
+    const [aiDescription, setAiDescription] = useState('');
+    const [stylingTips, setStylingTips] = useState('');
+    const [isLoading, setIsLoading] = useState({ description: false, styling: false });
+    const [error, setError] = useState({ description: null, styling: null });
+
+    // Reset AI content when product changes
+    useEffect(() => {
+        setAiDescription('');
+        setStylingTips('');
+        setError({ description: null, styling: null });
+    }, [product]);
+
+    // Reusable function to call the Gemini API
+    const callGeminiAPI = async (prompt, loadingKey, errorKey, setter) => {
+        // IMPORTANT: Use an environment variable for the Gemini API key.
+        const apiKey = process.env.REACT_APP_GEMINI_API_KEY; 
+
+        if (!apiKey) {
+            setError(prev => ({ ...prev, [errorKey]: "API key is missing. Please add it in your .env file." }));
+            return;
+        }
+        
+        setIsLoading(prev => ({ ...prev, [loadingKey]: true }));
+        setError(prev => ({ ...prev, [errorKey]: null }));
+        setter('');
+
+        try {
+            const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-preview-0514:generateContent?key=${apiKey}`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] })
+            });
+
+            if (!response.ok) {
+                const errorData = await response.json();
+                throw new Error(errorData.error?.message || `API request failed with status ${response.status}`);
+            }
+
+            const result = await response.json();
+            const text = result.candidates?.[0]?.content?.parts?.[0]?.text;
+
+            if (text) {
+                setter(text);
+            } else {
+                throw new Error("Invalid response structure from API.");
+            }
+        } catch (e) {
+            setError(prev => ({ ...prev, [errorKey]: e.message || "An unexpected error occurred." }));
+        } finally {
+            setIsLoading(prev => ({ ...prev, [loadingKey]: false }));
+        }
+    };
+
+    // Function to generate AI description
+    const generateDescription = () => {
+        const prompt = `Write a creative, fresh, and appealing e-commerce product description for the following item: "${product.title}". Make it sound exciting and desirable for a modern audience. Keep it concise (around 2-3 sentences). Don't use markdown formatting.`;
+        callGeminiAPI(prompt, 'description', 'description', setAiDescription);
+    };
+
+    // Function to get styling tips
+    const getStylingTips = () => {
+        const prompt = `Give me some cool, modern styling tips for a "${product.title}". Suggest complementary clothing items and accessories based on its category: "${product.category}". Format the response with bullet points using '*' for each point.`;
+        callGeminiAPI(prompt, 'styling', 'styling', setStylingTips);
+    };
+
     return (
-        <div className="glass-card rounded-3xl p-8 md:p-12">
+        <div className="glass-card rounded-3xl p-6 md:p-12">
             <button onClick={() => onNavigate('shop')} className="mb-8 text-sm hover:text-gray-300">← Back to Shop</button>
-            <div className="flex flex-col md:flex-row gap-12">
+            <div className="flex flex-col md:flex-row gap-8 md:gap-12">
                 <div className="md:w-1/2 flex justify-center items-center p-4 bg-white rounded-2xl">
                     <img src={product.image} alt={product.title} className="max-h-96 object-contain" />
                 </div>
@@ -164,7 +232,7 @@ const ProductDetailPage = ({ product, onAddToCart, onNavigate, onToggleWishlist,
                     <div className="flex justify-between items-start">
                         <div>
                             <p className="text-pink-400 text-sm capitalize mb-2">{product.category}</p>
-                            <h1 className="text-3xl font-bold mb-4">{product.title}</h1>
+                            <h1 className="text-2xl md:text-3xl font-bold mb-4">{product.title}</h1>
                         </div>
                         <button onClick={() => onToggleWishlist(product)} className="p-2 -mr-2 -mt-2 flex-shrink-0"><HeartIcon filled={isWishlisted} /></button>
                     </div>
@@ -173,10 +241,32 @@ const ProductDetailPage = ({ product, onAddToCart, onNavigate, onToggleWishlist,
                         <StarRating rating={product.rating.rate} />
                         <span className="text-gray-400">({product.rating.count} reviews)</span>
                     </div>
-                    <p className="font-bold text-4xl mb-8">₹{(product.price * 80).toFixed(2)}</p>
+                    <p className="font-bold text-3xl md:text-4xl mb-8">₹{(product.price * 80).toFixed(2)}</p>
                      <div className="flex flex-col gap-4">
                         <button onClick={() => onAddToCart(product)} className="w-full bg-pink-500 text-white font-bold py-3 rounded-full hover:bg-pink-600 transition-colors">Add to Cart</button>
+                        <button onClick={generateDescription} disabled={isLoading.description} className="w-full bg-white/10 text-white font-semibold py-3 rounded-full hover:bg-white/20 transition-colors disabled:opacity-50">
+                            {isLoading.description ? 'Generating...' : '✨ Generate AI Description'}
+                        </button>
+                         <button onClick={getStylingTips} disabled={isLoading.styling} className="w-full bg-white/10 text-white font-semibold py-3 rounded-full hover:bg-white/20 transition-colors disabled:opacity-50">
+                            {isLoading.styling ? 'Thinking...' : '✨ Get Styling Tips'}
+                        </button>
                     </div>
+                     {/* Display area for AI Description */}
+                    {error.description && <p className="text-red-400 text-xs mt-4">{error.description}</p>}
+                    {aiDescription && (
+                        <div className="mt-6 p-4 bg-black/20 rounded-lg">
+                            <h4 className="font-bold text-sm mb-2">AI Generated Description:</h4>
+                            <p className="text-gray-300 text-sm whitespace-pre-wrap">{aiDescription}</p>
+                        </div>
+                    )}
+                    {/* Display area for Styling Tips */}
+                    {error.styling && <p className="text-red-400 text-xs mt-4">{error.styling}</p>}
+                    {stylingTips && (
+                        <div className="mt-6 p-4 bg-black/20 rounded-lg">
+                            <h4 className="font-bold text-sm mb-2">Styling Tips:</h4>
+                            <p className="text-gray-300 text-sm whitespace-pre-wrap">{stylingTips}</p>
+                        </div>
+                    )}
                 </div>
             </div>
         </div>
@@ -184,7 +274,7 @@ const ProductDetailPage = ({ product, onAddToCart, onNavigate, onToggleWishlist,
 };
 
 const WishlistPage = ({ wishlist, onToggleWishlist, onAddToCart, onProductSelect, onQuickView, onNavigate }) => (
-    <div className="glass-card rounded-3xl p-8 md:p-12">
+    <div className="glass-card rounded-3xl p-6 md:p-12">
         <h1 className="text-3xl font-bold text-center mb-8">Your Wishlist</h1>
         {wishlist.length === 0 ? (
             <div className="text-center text-gray-300">
@@ -192,7 +282,7 @@ const WishlistPage = ({ wishlist, onToggleWishlist, onAddToCart, onProductSelect
                 <button onClick={() => onNavigate('shop')} className="mt-4 bg-pink-500 text-white font-bold py-2 px-6 rounded-full hover:bg-pink-600">Browse Products</button>
             </div>
         ) : (
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 md:gap-8">
                 {wishlist.map(product => (
                     <ProductCard key={product.id} product={product} onAddToCart={onAddToCart} onProductSelect={onProductSelect} onToggleWishlist={onToggleWishlist} isWishlisted={true} onQuickView={onQuickView} />
                 ))}
@@ -208,13 +298,13 @@ const CheckoutPage = ({ cartItems, onPlaceOrder }) => {
     const handleBack = () => setStep(step - 1);
 
     return (
-        <div className="glass-card rounded-3xl p-8 md:p-12 max-w-4xl mx-auto">
+        <div className="glass-card rounded-3xl p-6 md:p-12 max-w-4xl mx-auto">
             <h1 className="text-3xl font-bold text-center mb-8">Checkout</h1>
             <div className="flex justify-between items-center mb-12 max-w-md mx-auto">
                 <div className="flex flex-col items-center"><div className={`w-10 h-10 rounded-full flex items-center justify-center ${step >= 1 ? 'bg-pink-500' : 'bg-white/10'}`}>1</div><p className="mt-2 text-sm">Shipping</p></div>
-                <div className={`flex-grow h-1 mx-4 ${step >= 2 ? 'bg-pink-500' : 'bg-white/10'}`}></div>
+                <div className={`flex-grow h-1 mx-2 sm:mx-4 ${step >= 2 ? 'bg-pink-500' : 'bg-white/10'}`}></div>
                 <div className="flex flex-col items-center"><div className={`w-10 h-10 rounded-full flex items-center justify-center ${step >= 2 ? 'bg-pink-500' : 'bg-white/10'}`}>2</div><p className="mt-2 text-sm">Payment</p></div>
-                <div className={`flex-grow h-1 mx-4 ${step >= 3 ? 'bg-pink-500' : 'bg-white/10'}`}></div>
+                <div className={`flex-grow h-1 mx-2 sm:mx-4 ${step >= 3 ? 'bg-pink-500' : 'bg-white/10'}`}></div>
                 <div className="flex flex-col items-center"><div className={`w-10 h-10 rounded-full flex items-center justify-center ${step >= 3 ? 'bg-pink-500' : 'bg-white/10'}`}>3</div><p className="mt-2 text-sm">Review</p></div>
             </div>
 
@@ -259,7 +349,7 @@ const CheckoutPage = ({ cartItems, onPlaceOrder }) => {
 const OrderConfirmationPage = ({ onNavigate }) => (
     <div className="glass-card rounded-3xl p-8 md:p-12 text-center max-w-2xl mx-auto">
         <CheckCircleIcon />
-        <h1 className="text-4xl font-bold mt-6 mb-4">Thank You!</h1>
+        <h1 className="text-3xl sm:text-4xl font-bold mt-6 mb-4">Thank You!</h1>
         <p className="text-lg text-gray-300 mb-8">Your order has been placed successfully. We've sent a confirmation to your email.</p>
         <button onClick={() => onNavigate('home')} className="bg-pink-500 text-white font-bold py-3 px-8 rounded-full hover:bg-pink-600">Continue Shopping</button>
     </div>
@@ -267,7 +357,7 @@ const OrderConfirmationPage = ({ onNavigate }) => (
 
 const PlaceholderPage = ({ title, children }) => (
     <div className="glass-card rounded-3xl p-8 md:p-12 text-center">
-        <h1 className="text-4xl font-bold">{title}</h1>
+        <h1 className="text-3xl sm:text-4xl font-bold">{title}</h1>
         <div className="mt-4 text-lg text-gray-300">{children}</div>
     </div>
 );
@@ -306,9 +396,9 @@ const StarRating = ({ rating }) => {
 
 const Header = ({ onMenuToggle, onCartToggle, onSearchToggle, cartCount, onNavigate, currentUser, onLogout, onAuthModalOpen }) => (
     <header className="glass-card sticky top-4 mx-auto max-w-7xl rounded-2xl z-50 my-4">
-        <div className="container mx-auto px-6 py-4">
+        <div className="container mx-auto px-4 sm:px-6 py-4">
             <div className="flex items-center justify-between">
-                <div className="text-2xl font-bold tracking-wider"><button onClick={() => onNavigate('home')}>Prismora</button></div>
+                <div className="text-xl sm:text-2xl font-bold tracking-wider"><button onClick={() => onNavigate('home')}>SHOPPIA</button></div>
                 <nav className="hidden md:flex items-center space-x-8 text-sm font-medium">
                     <button onClick={() => onNavigate('home')} className="hover:text-gray-300">Home</button>
                     <button onClick={() => onNavigate('shop')} className="hover:text-gray-300">Shop</button>
@@ -316,11 +406,11 @@ const Header = ({ onMenuToggle, onCartToggle, onSearchToggle, cartCount, onNavig
                     <button onClick={() => onNavigate('about')} className="hover:text-gray-300">About</button>
                     <button onClick={() => onNavigate('contact')} className="hover:text-gray-300">Contact</button>
                 </nav>
-                <div className="flex items-center space-x-6">
-                    <button onClick={onSearchToggle} className="hover:text-gray-300"><SearchIcon /></button>
-                    <button onClick={onCartToggle} className="hover:text-gray-300 relative">
+                <div className="flex items-center space-x-2 sm:space-x-6">
+                    <button onClick={onSearchToggle} className="hover:text-gray-300 p-2"><SearchIcon /></button>
+                    <button onClick={onCartToggle} className="hover:text-gray-300 p-2 relative">
                         <ShoppingBagIcon />
-                        {cartCount > 0 && <span className="absolute -top-2 -right-2 bg-pink-500 text-white text-xs w-5 h-5 flex items-center justify-center rounded-full">{cartCount}</span>}
+                        {cartCount > 0 && <span className="absolute -top-1 -right-1 bg-pink-500 text-white text-xs w-5 h-5 flex items-center justify-center rounded-full">{cartCount}</span>}
                     </button>
                      {currentUser ? (
                         <div className="hidden sm:flex items-center gap-4">
@@ -333,31 +423,32 @@ const Header = ({ onMenuToggle, onCartToggle, onSearchToggle, cartCount, onNavig
                             <button onClick={() => onAuthModalOpen('signup')} className="bg-pink-500 text-white font-bold text-sm py-2 px-4 rounded-full hover:bg-pink-600">Sign Up</button>
                         </div>
                     )}
-                    <button className="md:hidden hover:text-gray-300" onClick={onMenuToggle}><MenuIcon /></button>
+                    <button className="md:hidden hover:text-gray-300 p-2" onClick={onMenuToggle}><MenuIcon /></button>
                 </div>
             </div>
         </div>
     </header>
 );
 
-const MobileMenu = ({ onNavigate, currentUser, onLogout, onAuthModalOpen }) => (
+const MobileMenu = ({ onNavigate, currentUser, onLogout, onAuthModalOpen, onToggle }) => (
     <div className="glass-card md:hidden mx-auto max-w-7xl rounded-2xl -mt-4 mb-4">
         <nav className="flex flex-col space-y-4 text-sm font-medium p-6">
-            <button onClick={() => onNavigate('home')} className="text-left hover:text-gray-300">Home</button>
-            <button onClick={() => onNavigate('shop')} className="text-left hover:text-gray-300">Shop</button>
-            <button onClick={() => onNavigate('wishlist')} className="text-left hover:text-gray-300">Wishlist</button>
-            <button onClick={() => onNavigate('about')} className="text-left hover:text-gray-300">About</button>
-            <button onClick={() => onNavigate('contact')} className="text-left hover:text-gray-300">Contact</button>
+             <div className="flex justify-end mb-4"><button onClick={onToggle} className="text-white hover:text-gray-300"><XIcon /></button></div>
+            <button onClick={() => {onNavigate('home'); onToggle();}} className="text-left hover:text-gray-300">Home</button>
+            <button onClick={() => {onNavigate('shop'); onToggle();}} className="text-left hover:text-gray-300">Shop</button>
+            <button onClick={() => {onNavigate('wishlist'); onToggle();}} className="text-left hover:text-gray-300">Wishlist</button>
+            <button onClick={() => {onNavigate('about'); onToggle();}} className="text-left hover:text-gray-300">About</button>
+            <button onClick={() => {onNavigate('contact'); onToggle();}} className="text-left hover:text-gray-300">Contact</button>
             <div className="border-t border-white/10 my-2"></div>
             {currentUser ? (
                 <>
-                    <p className="text-left">Welcome, {currentUser.displayName || currentUser.email}!</p>
-                    <button onClick={onLogout} className="text-left text-red-400 hover:text-red-300">Logout</button>
+                    <p className="text-left">Welcome, {currentUser.displayName || currentUser.email.split('@')[0]}!</p>
+                    <button onClick={() => {onLogout(); onToggle();}} className="text-left text-red-400 hover:text-red-300">Logout</button>
                 </>
             ) : (
                 <>
-                    <button onClick={() => onAuthModalOpen('login')} className="text-left hover:text-gray-300">Login</button>
-                    <button onClick={() => onAuthModalOpen('signup')} className="text-left hover:text-gray-300">Sign Up</button>
+                    <button onClick={() => {onAuthModalOpen('login'); onToggle();}} className="text-left hover:text-gray-300">Login</button>
+                    <button onClick={() => {onAuthModalOpen('signup'); onToggle();}} className="text-left hover:text-gray-300">Sign Up</button>
                 </>
             )}
         </nav>
@@ -370,20 +461,20 @@ const CartModal = ({ isOpen, onToggle, cartItems, onUpdateQuantity, onNavigate }
     const handleCheckout = () => { onToggle(); onNavigate('checkout'); };
 
     return (
-        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center">
-            <div className="glass-card rounded-2xl w-full max-w-lg mx-4">
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+            <div className="glass-card rounded-2xl w-full max-w-lg">
                 <div className="p-6">
                     <div className="flex justify-between items-center mb-6"><h2 className="text-2xl font-bold">Your Cart</h2><button onClick={onToggle} className="text-white hover:text-gray-300"><XIcon /></button></div>
                     {cartItems.length === 0 ? <p className="text-center text-gray-300">Your cart is empty.</p> : (
                         <div>
                             <div className="space-y-4 max-h-80 overflow-y-auto pr-2">
                                 {cartItems.map(item => (
-                                    <div key={item.id} className="flex items-center justify-between">
+                                    <div key={item.id} className="flex flex-col sm:flex-row items-center justify-between">
                                         <div className="flex items-center gap-4">
                                             <img src={item.image} alt={item.title} className="w-16 h-16 rounded-lg object-contain bg-white p-1" />
                                             <div><h3 className="font-semibold text-sm">{item.title}</h3><p className="text-gray-300 text-sm">₹{(item.price * 80).toFixed(2)}</p></div>
                                         </div>
-                                        <div className="flex items-center gap-3">
+                                        <div className="flex items-center gap-3 mt-2 sm:mt-0">
                                             <button onClick={() => onUpdateQuantity(item.id, item.quantity - 1)} className="w-6 h-6 bg-white/10 rounded-full">-</button>
                                             <span>{item.quantity}</span>
                                             <button onClick={() => onUpdateQuantity(item.id, item.quantity + 1)} className="w-6 h-6 bg-white/10 rounded-full">+</button>
@@ -410,8 +501,8 @@ const SearchModal = ({ isOpen, onToggle, onProductSelect, products }) => {
     if (!isOpen) return null;
 
     return (
-        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center" onClick={onToggle}>
-            <div className="glass-card rounded-2xl w-full max-w-lg mx-4" onClick={e => e.stopPropagation()}>
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4" onClick={onToggle}>
+            <div className="glass-card rounded-2xl w-full max-w-lg" onClick={e => e.stopPropagation()}>
                 <div className="p-6">
                     <div className="flex justify-between items-center mb-6"><h2 className="text-2xl font-bold">Search Products</h2><button onClick={onToggle} className="text-white hover:text-gray-300"><XIcon /></button></div>
                     <div className="relative">
@@ -459,8 +550,8 @@ const AuthModal = ({ mode, onToggle, onLogin, onSignUp, onSwitchMode }) => {
     if (!mode) return null;
 
     return (
-        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center" onClick={onToggle}>
-            <div className="glass-card rounded-2xl w-full max-w-md mx-4" onClick={e => e.stopPropagation()}>
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4" onClick={onToggle}>
+            <div className="glass-card rounded-2xl w-full max-w-md" onClick={e => e.stopPropagation()}>
                 <form onSubmit={handleSubmit} className="p-8">
                     <div className="flex justify-between items-center mb-6"><h2 className="text-2xl font-bold">{mode === 'login' ? 'Login' : 'Sign Up'}</h2><button type="button" onClick={onToggle} className="text-white hover:text-gray-300"><XIcon /></button></div>
                     <div className="space-y-4">
@@ -481,14 +572,14 @@ const QuickViewModal = ({ product, onToggle, onAddToCart, onProductSelect }) => 
     if (!product) return null;
     const handleViewDetails = () => { onToggle(); onProductSelect(product); };
     return (
-        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center" onClick={onToggle}>
-            <div className="glass-card rounded-2xl w-full max-w-4xl mx-4" onClick={e => e.stopPropagation()}>
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4" onClick={onToggle}>
+            <div className="glass-card rounded-2xl w-full max-w-4xl" onClick={e => e.stopPropagation()}>
                 <div className="p-8 relative">
                     <button onClick={onToggle} className="absolute top-4 right-4 text-white hover:text-gray-300"><XIcon /></button>
                     <div className="flex flex-col md:flex-row gap-8">
                         <div className="md:w-1/2 flex justify-center items-center p-4 bg-white rounded-lg"><img src={product.image} alt={product.title} className="max-h-80 object-contain" /></div>
                         <div className="md:w-1/2">
-                            <h2 className="text-3xl font-bold mb-2">{product.title}</h2>
+                            <h2 className="text-2xl md:text-3xl font-bold mb-2">{product.title}</h2>
                             <p className="text-gray-300 mb-4 text-sm h-24 overflow-y-auto">{product.description}</p>
                             <p className="font-bold text-2xl mb-6">₹{(product.price * 80).toFixed(2)}</p>
                             <div className="flex flex-col gap-4">
@@ -508,7 +599,7 @@ const Footer = ({ onNavigate }) => (
         <div className="glass-card rounded-t-3xl max-w-7xl mx-auto">
             <div className="container mx-auto px-6 py-8">
                 <div className="grid grid-cols-1 md:grid-cols-4 gap-8 text-center md:text-left">
-                    <div><h3 className="font-bold text-lg mb-4">Prismora</h3><p className="text-gray-300 text-sm">Your one-stop shop for everything.</p></div>
+                    <div><h3 className="font-bold text-lg mb-4">SHOPPIA</h3><p className="text-gray-300 text-sm">Your one-stop shop for everything.</p></div>
                     <div>
                         <h3 className="font-bold text-lg mb-4">Quick Links</h3>
                         <ul className="space-y-2 text-sm text-gray-300">
@@ -520,10 +611,10 @@ const Footer = ({ onNavigate }) => (
                     <div>
                         <h3 className="font-bold text-lg mb-4">Newsletter</h3>
                         <p className="text-gray-300 text-sm mb-4">Get updates on new arrivals.</p>
-                        <form className="flex" onSubmit={e => e.preventDefault()}><input type="email" placeholder="Your Email" className="w-full rounded-l-lg p-2 bg-black/20 border-none focus:ring-0" /><button type="submit" className="bg-white/90 text-black font-bold px-4 rounded-r-lg">Go</button></form>
+                        <form className="flex flex-col sm:flex-row" onSubmit={e => e.preventDefault()}><input type="email" placeholder="Your Email" className="w-full rounded-lg sm:rounded-l-lg sm:rounded-r-none p-2 bg-black/20 border-none focus:ring-0 mb-2 sm:mb-0" /><button type="submit" className="bg-white/90 text-black font-bold px-4 py-2 rounded-lg sm:rounded-r-lg sm:rounded-l-none">Go</button></form>
                     </div>
                 </div>
-                <div className="border-t border-white/10 mt-8 pt-6 text-center text-sm text-gray-400"><p>&copy; 2025 Prismora. All Rights Reserved.</p></div>
+                <div className="border-t border-white/10 mt-8 pt-6 text-center text-sm text-gray-400"><p>&copy; 2024 Shoppia. All Rights Reserved.</p></div>
             </div>
         </div>
     </footer>
@@ -784,9 +875,9 @@ export default function App() {
                 <QuickViewModal product={quickViewProduct} onToggle={() => setQuickViewProduct(null)} onAddToCart={addToCart} onProductSelect={handleProductSelect} />
 
                 <Header onMenuToggle={toggleMobileMenu} onCartToggle={toggleCart} onSearchToggle={toggleSearch} cartCount={cartCount} onNavigate={handleNavigation} currentUser={currentUser} onLogout={handleLogout} onAuthModalOpen={toggleAuthModal}/>
-                {isMobileMenuOpen && <MobileMenu onNavigate={handleNavigation} currentUser={currentUser} onLogout={handleLogout} onAuthModalOpen={toggleAuthModal} />}
+                {isMobileMenuOpen && <MobileMenu onNavigate={handleNavigation} currentUser={currentUser} onLogout={handleLogout} onAuthModalOpen={toggleAuthModal} onToggle={toggleMobileMenu} />}
 
-                <main className="container mx-auto px-6 py-12">
+                <main className="container mx-auto px-4 sm:px-6 py-8 md:py-12">
                     {renderPage()}
                 </main>
 
