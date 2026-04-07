@@ -496,7 +496,7 @@ function SubjectsManagementPanel({ studentBatchFilter, studentSectionFilter }: {
   const semesterOptions = useMemo(() => {
     if (!subjects) return [];
     const semesters = [
-      ...new Set(subjects.map((s) => s.semester).filter(Boolean)),
+      ...new Set(subjects.map((s) => s.semester).filter((s) => Boolean(s) && String(s) !== "0")),
     ];
     return semesters.sort((a, b) => a - b);
   }, [subjects]);
@@ -504,72 +504,68 @@ function SubjectsManagementPanel({ studentBatchFilter, studentSectionFilter }: {
   const totalSubjects = subjects?.length || 0;
   const activeSubjects = subjects?.filter((s) => s.is_active)?.length || 0;
   const inactiveSubjects = totalSubjects - activeSubjects;
-
   return (
     <div className="space-y-6">
-      {/* Header & Stats */}
-      <div className="panel">
-        <div className="flex items-center justify-between mb-6">
+      <div className="panel p-4 sm:p-6">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
           <div>
             <h2 className="text-xl font-bold text-foreground">
               Subject Management
             </h2>
-            <p className="text-sm text-muted-foreground">
+            <p className="text-sm text-muted-foreground leading-relaxed">
               Control which subjects are active for the current semester
             </p>
           </div>
+          
+          <div className="flex flex-wrap items-center gap-2">
+            <select
+              value={statusFilter}
+              onChange={(e) => setStatusFilter(e.target.value)}
+              className="input-field flex-1 sm:w-32 !py-2"
+            >
+              <option value="ALL">All Status</option>
+              <option value="ACTIVE">Active</option>
+              <option value="INACTIVE">Inactive</option>
+            </select>
 
-          <div className="flex items-center gap-4">
-            <div className="flex items-center gap-2">
-              <select
-                value={statusFilter}
-                onChange={(e) => setStatusFilter(e.target.value)}
-                className="input-field w-32 !py-2"
-              >
-                <option value="ALL">All Status</option>
-                <option value="ACTIVE">Active</option>
-                <option value="INACTIVE">Inactive</option>
-              </select>
-
-              <select
-                value={semesterFilter}
-                onChange={(e) => setSemesterFilter(e.target.value)}
-                className="input-field w-32 !py-2"
-              >
-                <option value="ALL">All Semesters</option>
-                {semesterOptions.map((sem) => (
-                  <option key={sem} value={String(sem)}>
-                    Sem {sem}
-                  </option>
-                ))}
-              </select>
-            </div>
+            <select
+              value={semesterFilter}
+              onChange={(e) => setSemesterFilter(e.target.value)}
+              className="input-field flex-1 sm:w-32 !py-2"
+            >
+              <option value="ALL">All Semesters</option>
+              {semesterOptions.map((sem) => (
+                <option key={sem} value={String(sem)}>
+                  Sem {sem}
+                </option>
+              ))}
+            </select>
           </div>
         </div>
 
         {/* Summary Stats */}
-        <div className="grid grid-cols-3 gap-4 mb-6">
-          <div className="text-center p-4 rounded-xl bg-muted/20">
-            <p className="text-2xl font-bold text-foreground">
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-2">
+          <div className="text-center p-3 rounded-xl bg-muted/20 border border-border/50">
+            <p className="text-2xl font-bold text-foreground leading-none mb-1">
               {totalSubjects}
             </p>
-            <p className="text-xs uppercase tracking-widest text-muted-foreground">
+            <p className="text-[10px] uppercase font-black tracking-widest text-muted-foreground">
               Total Subjects
             </p>
           </div>
-          <div className="text-center p-4 rounded-xl bg-emerald-500/10">
-            <p className="text-2xl font-bold text-emerald-600">
+          <div className="text-center p-3 rounded-xl bg-emerald-500/10 border border-emerald-500/20">
+            <p className="text-2xl font-bold text-emerald-600 leading-none mb-1">
               {activeSubjects}
             </p>
-            <p className="text-xs uppercase tracking-widest text-muted-foreground">
+            <p className="text-[10px] uppercase font-black tracking-widest text-muted-foreground">
               Active
             </p>
           </div>
-          <div className="text-center p-4 rounded-xl bg-rose-500/10">
-            <p className="text-2xl font-bold text-rose-600">
+          <div className="text-center p-3 rounded-xl bg-rose-500/10 border border-rose-500/20">
+            <p className="text-2xl font-bold text-rose-600 leading-none mb-1">
               {inactiveSubjects}
             </p>
-            <p className="text-xs uppercase tracking-widest text-muted-foreground">
+            <p className="text-[10px] uppercase font-black tracking-widest text-muted-foreground">
               Inactive
             </p>
           </div>
@@ -586,12 +582,12 @@ function SubjectsManagementPanel({ studentBatchFilter, studentSectionFilter }: {
           {Object.entries(groupedSubjects)
             .sort(([a], [b]) => Number(a) - Number(b))
             .map(([semester, semesterSubjects]) => (
-              <div key={semester} className="panel">
-                <div className="flex items-center justify-between mb-4">
+              <div key={semester} className="panel p-4 sm:p-6">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-6">
                   <h3 className="text-lg font-semibold text-foreground">
                     Semester {semester}
                   </h3>
-                  <div className="flex gap-2">
+                  <div className="flex items-center gap-2">
                     <button
                       onClick={async () => {
                         const subjectsToEnable = semesterSubjects.filter(
@@ -605,7 +601,7 @@ function SubjectsManagementPanel({ studentBatchFilter, studentSectionFilter }: {
                           }
                         }
                       }}
-                      className="text-xs px-3 py-1 rounded-lg bg-emerald-500/10 text-emerald-600 hover:bg-emerald-500/20"
+                      className="text-xs px-3 py-1.5 font-bold rounded-lg bg-emerald-500/10 text-emerald-600 hover:bg-emerald-500/20 active:scale-95 transition-all"
                       disabled={toggleSubjectMutation.isPending}
                     >
                       Enable All
@@ -623,7 +619,7 @@ function SubjectsManagementPanel({ studentBatchFilter, studentSectionFilter }: {
                           }
                         }
                       }}
-                      className="text-xs px-3 py-1 rounded-lg bg-rose-500/10 text-rose-600 hover:bg-rose-500/20"
+                      className="text-xs px-3 py-1.5 font-bold rounded-lg bg-rose-500/10 text-rose-600 hover:bg-rose-500/20 active:scale-95 transition-all"
                       disabled={toggleSubjectMutation.isPending}
                     >
                       Disable All
@@ -635,30 +631,32 @@ function SubjectsManagementPanel({ studentBatchFilter, studentSectionFilter }: {
                   {semesterSubjects.map((subject) => (
                     <div
                       key={subject.id}
-                      className="flex items-center justify-between p-3 rounded-lg bg-muted/10"
+                      className="flex flex-col sm:flex-row sm:items-center justify-between p-4 rounded-xl bg-muted/10 border border-border/40 gap-4"
                     >
-                      <div className="flex-1">
-                        <div className="flex items-center gap-3">
-                          <span className="font-mono text-sm font-bold text-accent">
-                            {subject.subject_code}
-                          </span>
-                          <span className="font-medium text-foreground">
+                      <div className="flex-1 space-y-2">
+                        <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3">
+                          <div className="flex items-center gap-2">
+                            <span className="font-mono text-xs font-black tracking-widest px-2 py-0.5 rounded bg-muted/20 text-accent border border-border/40">
+                              {subject.subject_code}
+                            </span>
+                            {subject.records > 0 && (
+                              <span className="text-[10px] px-2 py-0.5 rounded-full bg-primary/10 text-primary font-black uppercase tracking-wider">
+                                {subject.records} records
+                              </span>
+                            )}
+                          </div>
+                          <span className="font-semibold text-foreground text-sm sm:text-base">
                             {subject.subject_name}
                           </span>
-                          {subject.records > 0 && (
-                            <span className="text-xs px-2 py-0.5 rounded bg-primary/10 text-primary">
-                              {subject.records} records
-                            </span>
-                          )}
                         </div>
                       </div>
 
-                      <div className="flex items-center gap-3">
+                      <div className="flex items-center justify-between sm:justify-start gap-4 pt-4 sm:pt-0 border-t sm:border-t-0 border-border/40">
                         <span
-                          className={`text-xs font-bold px-2 py-1 rounded-lg ${
+                          className={`text-[10px] font-black uppercase tracking-widest px-3 py-1 rounded-full ${
                             subject.is_active
-                              ? "bg-emerald-500/20 text-emerald-600"
-                              : "bg-rose-500/20 text-rose-600"
+                              ? "bg-emerald-500/10 text-emerald-600"
+                              : "bg-rose-500/10 text-rose-600"
                           }`}
                         >
                           {subject.is_active ? "Active" : "Inactive"}
@@ -667,7 +665,7 @@ function SubjectsManagementPanel({ studentBatchFilter, studentSectionFilter }: {
                         <button
                           onClick={() => handleToggleSubject(subject.id)}
                           disabled={toggleSubjectMutation.isPending}
-                          className={`px-3 py-1 text-xs font-bold rounded-lg transition-all ${
+                          className={`px-4 py-1.5 text-[10px] font-black uppercase tracking-widest rounded-full transition-all active:scale-95 ${
                             subject.is_active
                               ? "bg-rose-500/10 text-rose-600 hover:bg-rose-500/20"
                               : "bg-emerald-500/10 text-emerald-600 hover:bg-emerald-500/20"
@@ -1371,7 +1369,7 @@ export default function AdminDashboard() {
       new Set(
         subjectCatalog
           .map((s) => s.semester)
-          .filter((s): s is number => s != null),
+          .filter((s): s is number => s != null && String(s) !== "0"),
       ),
     ).sort((a, b) => a - b);
   }, [subjectCatalog]);
@@ -2156,10 +2154,10 @@ export default function AdminDashboard() {
                       <th key={col.key} className="px-4 py-3 text-left">
                         <button
                           onClick={() =>
-                            ["rank", "name", "roll_no"].includes(col.key) &&
+                            ["rank", "name", "roll_no", "gpa", "attendance", "backlogs"].includes(col.key) &&
                             toggleSort(col.key as any)
                           }
-                          className={`flex items-center gap-1 text-[10px] font-black uppercase tracking-widest ${["rank", "name", "roll_no"].includes(col.key) ? "hover:text-primary transition-colors" : "text-muted-foreground"}`}
+                          className={`flex items-center gap-1 text-[10px] font-black uppercase tracking-widest ${["rank", "name", "roll_no", "gpa", "attendance", "backlogs"].includes(col.key) ? "hover:text-primary transition-colors" : "text-muted-foreground"}`}
                         >
                           {col.label}
 
@@ -3244,7 +3242,7 @@ export default function AdminDashboard() {
                       new Set(
                         (subjectCatalog || [])
                           .map((s: any) => s.semester)
-                          .filter(Boolean),
+                          .filter((s) => Boolean(s) && String(s) !== "0"),
                       ),
                     )
                       .sort((a, b) => Number(a) - Number(b))

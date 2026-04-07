@@ -1,15 +1,15 @@
 import React, { useState, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useSearchParams } from 'react-router-dom';
-import { 
-  BookOpen, 
-  Users, 
-  TrendingUp, 
-  Calendar, 
-  ArrowRight, 
-  Edit3, 
-  FileText, 
-  Loader2, 
+import {
+  BookOpen,
+  Users,
+  TrendingUp,
+  Calendar,
+  ArrowRight,
+  Edit3,
+  FileText,
+  Loader2,
   CalendarDays,
   CheckCircle,
   AlertTriangle,
@@ -62,10 +62,10 @@ const SubjectCard = ({ subject, onManageMarks }) => (
         SEM {subject.semester}
       </span>
     </div>
-    
+
     <h3 className="text-lg font-bold text-foreground mb-1">{subject.subject_name}</h3>
     <p className="text-sm text-muted-foreground font-mono mb-6">{subject.course_code}</p>
-    
+
     <div className="grid grid-cols-4 gap-2 mb-6">
       <div className="p-2 rounded-xl border border-border/40 bg-muted/20 text-center">
         <p className="text-[10px] text-muted-foreground font-semibold mb-1 uppercase tracking-tight">Students</p>
@@ -84,8 +84,8 @@ const SubjectCard = ({ subject, onManageMarks }) => (
         <p className="text-lg font-bold">{subject.average_attendance}%</p>
       </div>
     </div>
-    
-    <button 
+
+    <button
       onClick={() => onManageMarks(subject)}
       className="btn-primary w-full flex items-center justify-center gap-2 py-3 rounded-2xl group/btn"
     >
@@ -106,7 +106,7 @@ export default function StaffDashboard() {
   useEffect(() => {
     const tabFromUrl = searchParams.get('tab');
     if (tabFromUrl && tabFromUrl !== activeTab) {
-       // activeTab is derived from searchParams, so this is mostly for local state sync if needed
+      // activeTab is derived from searchParams, so this is mostly for local state sync if needed
     }
   }, [searchParams, activeTab]);
 
@@ -141,13 +141,13 @@ export default function StaffDashboard() {
   }
 
   const staff = data;
-  
+
   const getGreetingName = () => {
     if (!staff?.name) return "";
     const parts = staff.name.split(' ');
     const titles = ['dr.', 'mr.', 'ms.', 'prof.', 'prof', 'dr'];
     if (parts.length > 1 && titles.includes(parts[0].toLowerCase())) {
-       return parts.slice(0, 2).join(' ');
+      return parts.slice(0, 2).join(' ');
     }
     return parts[0];
   };
@@ -167,13 +167,12 @@ export default function StaffDashboard() {
               {activeTab === 'Schedule' && "View your weekly academic schedule and timetable assignments."}
             </p>
           </div>
-          
+
           <div className="flex flex-wrap items-center gap-4">
             <div className="flex items-center gap-2 px-4 py-2 rounded-2xl bg-white/10 text-white border border-white/20 backdrop-blur-sm">
               <CalendarDays size={18} />
               <span className="text-sm font-semibold">{staff?.department || 'MCA Department'}</span>
             </div>
-            <NotificationBell className="!text-white" />
           </div>
         </div>
       </header>
@@ -181,29 +180,29 @@ export default function StaffDashboard() {
       {activeTab === 'Overview' && (
         <>
           <section className="grid gap-6 md:grid-cols-2 xl:grid-cols-4">
-            <StatCard 
-              label="Total Students" 
-              value={staff?.total_students_handled || 0} 
-              hint="Enrolled in your subjects" 
-              icon={Users} 
+            <StatCard
+              label="Total Students"
+              value={staff?.total_students_handled || 0}
+              hint="Enrolled in your subjects"
+              icon={Users}
             />
-            <StatCard 
-              label="Subjects" 
-              value={staff?.subjects?.length || 0} 
-              hint="Active teaching load" 
-              icon={BookOpen} 
+            <StatCard
+              label="Subjects"
+              value={staff?.subjects?.length || 0}
+              hint="Active teaching load"
+              icon={BookOpen}
             />
-            <StatCard 
-              label="Avg Performance" 
-              value={`${staff?.average_performance || 0}%`} 
-              hint="Batch avg score" 
-              icon={TrendingUp} 
+            <StatCard
+              label="Avg Performance"
+              value={`${staff?.average_performance || 0}%`}
+              hint="Batch avg score"
+              icon={TrendingUp}
             />
-            <StatCard 
-              label="Pending Marks" 
-              value={staff?.pending_marks_count || 0} 
-              hint="Students needing entry" 
-              icon={FileText} 
+            <StatCard
+              label="Pending Marks"
+              value={staff?.pending_marks_count || 0}
+              hint="Students needing entry"
+              icon={FileText}
             />
           </section>
 
@@ -214,16 +213,16 @@ export default function StaffDashboard() {
                 <p className="text-muted-foreground mt-1">Select a subject to manage student lists and internal assessments.</p>
               </div>
             </div>
-            
+
             <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
               {staff?.subjects?.map((subject) => (
-                <SubjectCard 
-                  key={subject.id} 
-                  subject={subject} 
-                  onManageMarks={setSelectedSubject} 
+                <SubjectCard
+                  key={subject.id}
+                  subject={subject}
+                  onManageMarks={setSelectedSubject}
                 />
               ))}
-              
+
               {staff?.subjects?.length === 0 && (
                 <div className="col-span-full py-20 bg-muted/20 border-2 border-dashed border-border rounded-[2.5rem] flex flex-col items-center justify-center text-center">
                   <div className="p-4 rounded-3xl bg-muted mb-4">
@@ -263,7 +262,7 @@ export default function StaffDashboard() {
                 )}
               </div>
             </div>
-            
+
             <div className="panel">
               <div className="flex items-center justify-between mb-6">
                 <h3 className="text-lg font-bold">Department Announcements</h3>
@@ -316,9 +315,9 @@ export default function StaffDashboard() {
                   <input name="email" type="email" className="input-field w-full" defaultValue={staff?.email || user?.email} />
                 </div>
               </div>
-              <button 
-                type="submit" 
-                disabled={updateProfileMutation.isPending} 
+              <button
+                type="submit"
+                disabled={updateProfileMutation.isPending}
                 className="btn-primary w-fit group"
               >
                 {updateProfileMutation.isPending ? <Loader2 className="animate-spin" size={18} /> : <Save size={18} />}
@@ -394,9 +393,9 @@ export default function StaffDashboard() {
       )}
 
       {selectedSubject && (
-        <MarksEntry 
-          subject={selectedSubject} 
-          onClose={() => setSelectedSubject(null)} 
+        <MarksEntry
+          subject={selectedSubject}
+          onClose={() => setSelectedSubject(null)}
         />
       )}
     </div>

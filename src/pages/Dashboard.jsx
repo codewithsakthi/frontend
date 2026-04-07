@@ -1,14 +1,14 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { 
-  Loader2, Sparkles, TrendingUp, CheckCircle2, AlertTriangle, Info, 
-  Award, Calendar, BadgeAlert, LogOut, RefreshCw, Save, Lock, Shield, Search, Wifi 
+import {
+  Loader2, Sparkles, TrendingUp, CheckCircle2, AlertTriangle, Info,
+  Award, Calendar, BadgeAlert, LogOut, RefreshCw, Save, Lock, Shield, Search, Wifi
 } from 'lucide-react';
 import { useRealTimeAttendance } from '../hooks/useRealTimeAttendance';
-import { 
-  ResponsiveContainer, AreaChart, XAxis, YAxis, CartesianGrid, Tooltip, Area, 
-  BarChart, Bar, Cell, PieChart, Pie 
+import {
+  ResponsiveContainer, AreaChart, XAxis, YAxis, CartesianGrid, Tooltip, Area,
+  BarChart, Bar, Cell, PieChart, Pie
 } from 'recharts';
 import { useAuthStore } from '../store/authStore';
 import { useThemeStore } from '../store/themeStore';
@@ -49,12 +49,12 @@ const Dashboard = () => {
   const [sortDir, setSortDir] = useState('desc');
   const [showSyncModal, setShowSyncModal] = useState(false);
   const [syncDob, setSyncDob] = useState(localStorage.getItem('syncDob') || '');
-  
+
   // Attendance Pagination & Filter State
   const [attPage, setAttPage] = useState(1);
   const [attSem, setAttSem] = useState('ALL');
   const attSize = 10;
-  
+
   const rollNo = user?.roll_no || user?.username;
 
   // Data Fetching
@@ -256,7 +256,7 @@ const Dashboard = () => {
         <div className="absolute top-0 right-0 w-64 h-64 bg-primary/10 rounded-full blur-3xl -mr-32 -mt-32" />
         <div className="relative z-10">
           <div className="flex items-center gap-3 mb-4">
-             <span className="px-3 py-1 rounded-full bg-primary/20 text-primary text-[10px] font-black uppercase tracking-widest border border-primary/20">Academic Pulse v2</span>
+            <span className="px-3 py-1 rounded-full bg-primary/20 text-primary text-[10px] font-black uppercase tracking-widest border border-primary/20">Academic Pulse v2</span>
           </div>
           <h1 className="text-3xl md:text-5xl font-black tracking-tighter mb-2 leading-tight">
             Welcome, <span className="text-gradient animate-pulse">{user?.name || 'Academic'}</span>
@@ -270,7 +270,6 @@ const Dashboard = () => {
           </div>
         </div>
         <div className="relative z-10 flex items-center gap-3">
-          <NotificationBell />
         </div>
       </header>
 
@@ -280,9 +279,9 @@ const Dashboard = () => {
           {/* Intelligence Spotlight */}
           <div className="col-span-12 lg:col-span-8 flex flex-col justify-between glass rounded-[2.5rem] p-8 card-premium">
             <div>
-              <SectionTitle 
-                eyebrow="Intelligence Pulse" 
-                title="Academic Insight" 
+              <SectionTitle
+                eyebrow="Intelligence Pulse"
+                title="Academic Insight"
                 copy="Automated observations across your semester trajectory."
               />
               <div className="grid md:grid-cols-2 gap-6 mt-8">
@@ -296,12 +295,10 @@ const Dashboard = () => {
                     <span className="text-2xl font-black text-primary">{num(intelligence?.predictedGpa)}</span>
                   </div>
                 </div>
-                <div className={`p-5 rounded-2xl border flex gap-4 ${
-                  intelligence?.riskLevel === 'Low' ? 'bg-emerald-500/5 border-emerald-500/10' : 'bg-rose-500/5 border-rose-500/10'
-                }`}>
-                  <div className={`p-3 rounded-xl h-fit ${
-                    intelligence?.riskLevel === 'Low' ? 'bg-emerald-500/10 text-emerald-500' : 'bg-rose-500/10 text-rose-500'
+                <div className={`p-5 rounded-2xl border flex gap-4 ${intelligence?.riskLevel === 'Low' ? 'bg-emerald-500/5 border-emerald-500/10' : 'bg-rose-500/5 border-rose-500/10'
                   }`}>
+                  <div className={`p-3 rounded-xl h-fit ${intelligence?.riskLevel === 'Low' ? 'bg-emerald-500/10 text-emerald-500' : 'bg-rose-500/10 text-rose-500'
+                    }`}>
                     {intelligence?.riskLevel === 'Low' ? <CheckCircle2 size={24} /> : <AlertTriangle size={24} />}
                   </div>
                   <div>
@@ -312,14 +309,14 @@ const Dashboard = () => {
                 </div>
               </div>
             </div>
-            
+
             <div className="mt-8 pt-8 border-t border-border/50">
               <div className="flex items-center justify-between mb-3 text-sm font-bold uppercase tracking-widest text-muted-foreground">
                 <span>Placement Readiness</span>
                 <span>{intelligence?.placementReadiness}%</span>
               </div>
               <div className="h-3 bg-muted rounded-full overflow-hidden p-0.5 ring-1 ring-border">
-                <div 
+                <div
                   className="h-full rounded-full transition-all duration-1000 ease-out bg-gradient-to-r from-primary to-accent shadow-[0_0_12px_-2px_rgba(var(--primary-rgb),0.5)]"
                   style={{ width: `${intelligence?.placementReadiness}%` }}
                 />
@@ -344,14 +341,14 @@ const Dashboard = () => {
                 <AreaChart data={intelligence?.semesterTrend}>
                   <defs>
                     <linearGradient id="colorGpa" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%" stopColor="var(--primary)" stopOpacity={0.3}/>
-                      <stop offset="95%" stopColor="var(--primary)" stopOpacity={0}/>
+                      <stop offset="5%" stopColor="var(--primary)" stopOpacity={0.3} />
+                      <stop offset="95%" stopColor="var(--primary)" stopOpacity={0} />
                     </linearGradient>
                   </defs>
                   <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="var(--border)" strokeOpacity={0.3} />
                   <XAxis dataKey="label" axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: 'var(--muted-foreground)' }} />
                   <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: 'var(--muted-foreground)' }} domain={[0, 10]} />
-                  <Tooltip 
+                  <Tooltip
                     contentStyle={{ border: '1px solid var(--border)', borderRadius: '12px', background: 'var(--card)', boxShadow: '0 8px 16px -4px rgba(0,0,0,0.1)' }}
                     itemStyle={{ fontSize: '12px', fontWeight: '600' }}
                   />
@@ -369,7 +366,7 @@ const Dashboard = () => {
                   <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="var(--border)" strokeOpacity={0.3} />
                   <XAxis dataKey="subject.course_code" axisLine={false} tickLine={false} tick={{ fontSize: 10, fill: 'var(--muted-foreground)' }} />
                   <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: 'var(--muted-foreground)' }} />
-                  <Tooltip 
+                  <Tooltip
                     contentStyle={{ border: '1px solid var(--border)', borderRadius: '12px', background: 'var(--card)' }}
                   />
                   <Bar dataKey="internal_marks" name="Internal Marks" radius={[6, 6, 0, 0]} fill="var(--primary)">
@@ -387,15 +384,14 @@ const Dashboard = () => {
             <div className="space-y-3 mt-6">
               {commandCenter?.recommended_actions?.map((action) => (
                 <div key={action.title} className="flex items-start gap-4 rounded-2xl border border-border bg-card/60 p-4">
-                  <div className={`mt-0.5 rounded-xl p-2 ${
-                    action.tone === 'critical'
+                  <div className={`mt-0.5 rounded-xl p-2 ${action.tone === 'critical'
                       ? 'bg-destructive/10 text-destructive'
                       : action.tone === 'warning'
                         ? 'bg-amber-500/10 text-amber-500'
                         : action.tone === 'positive'
                           ? 'bg-emerald-500/10 text-emerald-500'
                           : 'bg-primary/10 text-primary'
-                  }`}>
+                    }`}>
                     {action.tone === 'critical' ? <AlertTriangle size={16} /> : action.tone === 'positive' ? <CheckCircle2 size={16} /> : <Info size={16} />}
                   </div>
                   <div>
@@ -498,11 +494,11 @@ const Dashboard = () => {
               <div className="flex flex-wrap items-center gap-3">
                 <div className="relative group">
                   <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground group-focus-within:text-primary transition-colors" size={16} />
-                  <input 
+                  <input
                     className="pl-10 pr-4 py-2 bg-muted/50 rounded-xl border border-border focus:ring-2 ring-primary/20 outline-none transition-all w-64"
-                    placeholder="Search subject..." 
-                    value={searchTerm} 
-                    onChange={(e) => setSearchTerm(e.target.value)} 
+                    placeholder="Search subject..."
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
                   />
                 </div>
                 <select className="px-4 py-2 bg-muted/50 rounded-xl border border-border outline-none text-sm" value={semFilter} onChange={(e) => setSemFilter(e.target.value)}>
@@ -552,11 +548,10 @@ const Dashboard = () => {
                       <span className={`text-lg font-black ${['U', 'F', 'FAIL', 'RA'].includes(mark.grade?.toUpperCase()) ? 'text-destructive' : 'text-foreground'}`}>
                         {mark.grade || '-'}
                       </span>
-                      <span className={`px-2 py-0.5 rounded-full text-[10px] font-black uppercase ${
-                        mark.result_status?.toUpperCase() === 'PASS'
+                      <span className={`px-2 py-0.5 rounded-full text-[10px] font-black uppercase ${mark.result_status?.toUpperCase() === 'PASS'
                           ? 'bg-emerald-500/10 text-emerald-500'
                           : 'bg-rose-500/10 text-rose-500'
-                      }`}>{mark.result_status || '-'}</span>
+                        }`}>{mark.result_status || '-'}</span>
                       <span className="ml-auto font-bold text-sm">{mark.total_marks || '-'} pts</span>
                     </div>
                   </div>
@@ -591,11 +586,10 @@ const Dashboard = () => {
                         </span>
                       </td>
                       <td className="px-4 py-4">
-                        <span className={`px-2 py-0.5 rounded-full text-[10px] font-black uppercase ${
-                          mark.result_status?.toUpperCase() === 'PASS'
+                        <span className={`px-2 py-0.5 rounded-full text-[10px] font-black uppercase ${mark.result_status?.toUpperCase() === 'PASS'
                             ? 'bg-emerald-500/10 text-emerald-500'
                             : 'bg-rose-500/10 text-rose-500'
-                        }`}>
+                          }`}>
                           {mark.result_status || '-'}
                         </span>
                       </td>
@@ -683,9 +677,8 @@ const Dashboard = () => {
                       <td className="px-4 py-4 text-center font-bold text-muted-foreground">{mark.cit2_marks ?? '-'}</td>
                       <td className="px-4 py-4 text-center font-bold text-muted-foreground">{mark.cit3_marks ?? '-'}</td>
                       <td className="px-4 py-4 text-right">
-                        <span className={`font-black p-2 rounded-lg ${
-                          (mark.internal_marks ?? 0) < 15 ? 'text-rose-500 bg-rose-500/5' : 'text-primary bg-primary/5'
-                        }`}>
+                        <span className={`font-black p-2 rounded-lg ${(mark.internal_marks ?? 0) < 15 ? 'text-rose-500 bg-rose-500/5' : 'text-primary bg-primary/5'
+                          }`}>
                           {mark.internal_marks ?? '-'}
                         </span>
                       </td>
@@ -700,7 +693,7 @@ const Dashboard = () => {
               </table>
             </div>
           </div>
-          
+
           <div className="grid md:grid-cols-2 gap-6">
             <div className="glass rounded-[2.5rem] p-8 card-premium">
               <SectionTitle title="Subject Mastery Distribution" />
@@ -716,20 +709,20 @@ const Dashboard = () => {
               </div>
             </div>
             <div className="glass rounded-[2.5rem] p-8 card-premium overflow-hidden">
-               <SectionTitle title="Intelligence: Weak Areas" />
-               <div className="space-y-3 mt-6">
-                 {intelligence?.weaknesses?.length ? intelligence.weaknesses.map((w, i) => (
-                   <div key={i} className="flex items-center gap-4 p-4 rounded-xl bg-destructive/5 border border-destructive/10">
-                     <div className="p-2 rounded-lg bg-destructive/10 text-destructive"><Info size={16} /></div>
-                     <div>
-                       <p className="text-sm font-bold">{w.subject_title || w.subject_code}</p>
-                       <p className="text-xs text-muted-foreground">Recorded {w.grade_point} GP in Sem {w.semester}. Refinement critical.</p>
-                     </div>
-                   </div>
-                 )) : (
-                   <p className="text-muted-foreground text-sm italic">No significant academic risks detected.</p>
-                 )}
-               </div>
+              <SectionTitle title="Intelligence: Weak Areas" />
+              <div className="space-y-3 mt-6">
+                {intelligence?.weaknesses?.length ? intelligence.weaknesses.map((w, i) => (
+                  <div key={i} className="flex items-center gap-4 p-4 rounded-xl bg-destructive/5 border border-destructive/10">
+                    <div className="p-2 rounded-lg bg-destructive/10 text-destructive"><Info size={16} /></div>
+                    <div>
+                      <p className="text-sm font-bold">{w.subject_title || w.subject_code}</p>
+                      <p className="text-xs text-muted-foreground">Recorded {w.grade_point} GP in Sem {w.semester}. Refinement critical.</p>
+                    </div>
+                  </div>
+                )) : (
+                  <p className="text-muted-foreground text-sm italic">No significant academic risks detected.</p>
+                )}
+              </div>
             </div>
           </div>
 
@@ -780,26 +773,24 @@ const Dashboard = () => {
             <div className="flex flex-col md:flex-row md:items-end justify-between gap-6">
               <div className="flex flex-col">
                 <div className="flex items-center gap-2 mb-2">
-                  <SectionTitle 
-                    title="Attendance Records" 
+                  <SectionTitle
+                    title="Attendance Records"
                     copy="Day-by-day chronological record of your academic presence."
                   />
-                  <div className={`flex items-center gap-1 px-2 py-1 rounded-full text-[9px] font-black uppercase tracking-widest ${
-                    rtConnected 
-                      ? 'bg-emerald-500/10 text-emerald-500 border border-emerald-500/20' 
+                  <div className={`flex items-center gap-1 px-2 py-1 rounded-full text-[9px] font-black uppercase tracking-widest ${rtConnected
+                      ? 'bg-emerald-500/10 text-emerald-500 border border-emerald-500/20'
                       : 'bg-amber-500/10 text-amber-500 border border-amber-500/20'
-                  }`}>
+                    }`}>
                     <Wifi size={10} />
                     {rtConnected ? 'Live' : 'Polling'}
                   </div>
                 </div>
                 {attendanceData?.summary && (
                   <div className="flex items-center gap-2 mt-2">
-                    <div className={`px-3 py-1 rounded-full text-[11px] font-black uppercase tracking-wider ${
-                      attendanceData.summary.percentage >= 75 
-                        ? 'bg-emerald-500/10 text-emerald-500' 
+                    <div className={`px-3 py-1 rounded-full text-[11px] font-black uppercase tracking-wider ${attendanceData.summary.percentage >= 75
+                        ? 'bg-emerald-500/10 text-emerald-500'
                         : 'bg-rose-500/10 text-rose-500'
-                    }`}>
+                      }`}>
                       {attSem === 'ALL' ? 'Overall' : `Sem ${attSem}`} Attendance: {attendanceData.summary.percentage}%
                     </div>
                     <p className="text-[10px] text-muted-foreground uppercase font-bold tracking-tighter">
@@ -811,7 +802,7 @@ const Dashboard = () => {
               <div className="flex items-center gap-3">
                 <div className="flex items-center gap-2 bg-muted/30 p-1.5 rounded-xl border border-border">
                   <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground ml-2">Semester</span>
-                  <select 
+                  <select
                     className="bg-transparent text-sm font-bold focus:outline-none pr-4"
                     value={attSem}
                     onChange={(e) => {
@@ -827,7 +818,7 @@ const Dashboard = () => {
                 </div>
               </div>
             </div>
-            
+
             <div className="mt-8 space-y-4">
               {loadingAttendance ? (
                 <div className="flex flex-col items-center justify-center py-20">
@@ -847,49 +838,46 @@ const Dashboard = () => {
                       const matchPct = totalHours > 0 ? Math.round((totalPresent / totalHours) * 100) : 0;
 
                       return (
-                    <div key={idx} className="flex flex-col md:flex-row md:items-center justify-between gap-4 p-6 rounded-[2rem] border border-white/5 glass-dark hover:bg-white/10 transition-all duration-500 group card-premium">
-                      <div className="flex items-center gap-5">
-                        <div className={`p-4 rounded-2xl ${
-                          totalPresent === totalHours 
-                            ? 'bg-emerald-500/10 text-emerald-500 shadow-[0_0_20px_rgba(16,185,129,0.1)]' 
-                            : totalPresent === 0 
-                              ? 'bg-rose-500/10 text-rose-500 shadow-[0_0_20px_rgba(244,63,94,0.1)]'
-                              : 'bg-amber-500/10 text-amber-500 shadow-[0_0_20px_rgba(245,158,11,0.1)]'
-                        }`}>
-                          <Calendar size={24} />
-                        </div>
-                        <div>
-                          <p className="text-lg font-black tracking-tight">{dateLabel}</p>
-                          <div className="flex items-center gap-3 mt-1.5">
-                            <span className={`px-2 py-0.5 rounded-md text-[10px] font-black uppercase tracking-tighter ${
-                              totalPresent === totalHours ? 'bg-emerald-500 text-white' : 'bg-muted text-muted-foreground'
-                            }`}>
-                              {totalPresent === totalHours ? 'Full Presence' : `${totalPresent}h Tracked`}
-                            </span>
-                            <span className="text-xs font-bold text-muted-foreground/60">{matchPct}% Match</span>
-                            {day.semester && (
-                              <span className="text-[10px] font-black text-primary/80 uppercase tracking-widest">Sem {day.semester}</span>
-                            )}
-                          </div>
-                        </div>
-                      </div>
-
-                      <div className="flex items-center gap-2 p-2.5 bg-black/20 rounded-2xl w-fit">
-                        {statusArray.map((status, sIdx) => (
-                          <div key={sIdx} className="group/hour relative">
-                            <div className={`h-6 w-3 rounded-full transition-all duration-500 ${
-                                status.toUpperCase() === 'P' || status.toUpperCase() === 'OD'
-                                  ? 'bg-emerald-500 shadow-[0_0_12px_rgba(16,185,129,0.4)] group-hover/hour:h-8' 
-                                  : 'bg-rose-500 shadow-[0_0_12px_rgba(244,63,94,0.4)] group-hover/hour:h-8'
-                              }`}
-                            />
-                            <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-3 px-3 py-1.5 glass-dark text-[10px] rounded-lg shadow-2xl opacity-0 group-hover/hour:opacity-100 transition-all pointer-events-none whitespace-nowrap z-50 border border-white/10 font-black uppercase tracking-tighter">
-                              H{sIdx + 1}: {status.toUpperCase() === 'P' ? 'Present' : status.toUpperCase() === 'OD' ? 'On Duty' : 'Absent'}
+                        <div key={idx} className="flex flex-col md:flex-row md:items-center justify-between gap-4 p-6 rounded-[2rem] border border-white/5 glass-dark hover:bg-white/10 transition-all duration-500 group card-premium">
+                          <div className="flex items-center gap-5">
+                            <div className={`p-4 rounded-2xl ${totalPresent === totalHours
+                                ? 'bg-emerald-500/10 text-emerald-500 shadow-[0_0_20px_rgba(16,185,129,0.1)]'
+                                : totalPresent === 0
+                                  ? 'bg-rose-500/10 text-rose-500 shadow-[0_0_20px_rgba(244,63,94,0.1)]'
+                                  : 'bg-amber-500/10 text-amber-500 shadow-[0_0_20px_rgba(245,158,11,0.1)]'
+                              }`}>
+                              <Calendar size={24} />
+                            </div>
+                            <div>
+                              <p className="text-lg font-black tracking-tight">{dateLabel}</p>
+                              <div className="flex items-center gap-3 mt-1.5">
+                                <span className={`px-2 py-0.5 rounded-md text-[10px] font-black uppercase tracking-tighter ${totalPresent === totalHours ? 'bg-emerald-500 text-white' : 'bg-muted text-muted-foreground'
+                                  }`}>
+                                  {totalPresent === totalHours ? 'Full Presence' : `${totalPresent}h Tracked`}
+                                </span>
+                                <span className="text-xs font-bold text-muted-foreground/60">{matchPct}% Match</span>
+                                {day.semester && (
+                                  <span className="text-[10px] font-black text-primary/80 uppercase tracking-widest">Sem {day.semester}</span>
+                                )}
+                              </div>
                             </div>
                           </div>
-                        ))}
-                      </div>
-                    </div>
+
+                          <div className="flex items-center gap-2 p-2.5 bg-black/20 rounded-2xl w-fit">
+                            {statusArray.map((status, sIdx) => (
+                              <div key={sIdx} className="group/hour relative">
+                                <div className={`h-6 w-3 rounded-full transition-all duration-500 ${status.toUpperCase() === 'P' || status.toUpperCase() === 'OD'
+                                    ? 'bg-emerald-500 shadow-[0_0_12px_rgba(16,185,129,0.4)] group-hover/hour:h-8'
+                                    : 'bg-rose-500 shadow-[0_0_12px_rgba(244,63,94,0.4)] group-hover/hour:h-8'
+                                  }`}
+                                />
+                                <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-3 px-3 py-1.5 glass-dark text-[10px] rounded-lg shadow-2xl opacity-0 group-hover/hour:opacity-100 transition-all pointer-events-none whitespace-nowrap z-50 border border-white/10 font-black uppercase tracking-tighter">
+                                  H{sIdx + 1}: {status.toUpperCase() === 'P' ? 'Present' : status.toUpperCase() === 'OD' ? 'On Duty' : 'Absent'}
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
                       );
                     })()
                   ))}
@@ -901,14 +889,14 @@ const Dashboard = () => {
                         Showing page <span className="text-foreground font-bold">{attPage}</span> of <span className="text-foreground font-bold">{attendanceData.pages}</span>
                       </p>
                       <div className="flex items-center gap-2">
-                        <button 
+                        <button
                           onClick={() => setAttPage(prev => Math.max(1, prev - 1))}
                           disabled={attPage === 1}
                           className="p-2 rounded-xl bg-muted border border-border disabled:opacity-30 hover:bg-muted/80 transition-colors"
                         >
                           <TrendingUp size={20} className="rotate-[270deg]" />
                         </button>
-                        <button 
+                        <button
                           onClick={() => setAttPage(prev => Math.min(attendanceData.pages, prev + 1))}
                           disabled={attPage === attendanceData.pages}
                           className="p-2 rounded-xl bg-muted border border-border disabled:opacity-30 hover:bg-muted/80 transition-colors"
@@ -1033,7 +1021,7 @@ const Dashboard = () => {
               e.preventDefault();
               syncMutation.mutate(syncDob);
             }}>
-              <input 
+              <input
                 autoFocus
                 className="input-field w-full text-center text-xl font-mono tracking-widest mb-6"
                 placeholder="DDMMYYYY"

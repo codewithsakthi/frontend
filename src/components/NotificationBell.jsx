@@ -6,34 +6,26 @@ const TYPE_CONFIG = {
   attendance_marked: {
     icon: Users,
     color: 'text-indigo-600',
-    bg: 'bg-indigo-50 dark:bg-indigo-950/40',
-    border: 'border-indigo-200 dark:border-indigo-800',
-    badge: 'bg-indigo-100 text-indigo-700',
-    dot: 'bg-indigo-500',
+    bg: 'bg-indigo-500/10',
+    border: 'border-indigo-500/20',
   },
   attendance_update: {
     icon: BookOpen,
     color: 'text-emerald-600',
-    bg: 'bg-emerald-50 dark:bg-emerald-950/40',
-    border: 'border-emerald-200 dark:border-emerald-800',
-    badge: 'bg-emerald-100 text-emerald-700',
-    dot: 'bg-emerald-500',
+    bg: 'bg-emerald-500/10',
+    border: 'border-emerald-500/20',
   },
   submission_confirmed: {
     icon: Check,
     color: 'text-emerald-600',
-    bg: 'bg-emerald-50 dark:bg-emerald-950/40',
-    border: 'border-emerald-200 dark:border-emerald-800',
-    badge: 'bg-emerald-100 text-emerald-700',
-    dot: 'bg-emerald-500',
+    bg: 'bg-emerald-500/10',
+    border: 'border-emerald-500/20',
   },
   announcement: {
     icon: Megaphone,
     color: 'text-amber-600',
-    bg: 'bg-amber-50 dark:bg-amber-950/40',
-    border: 'border-amber-200 dark:border-amber-800',
-    badge: 'bg-amber-100 text-amber-700',
-    dot: 'bg-amber-500',
+    bg: 'bg-amber-500/10',
+    border: 'border-amber-500/20',
   },
 };
 
@@ -64,7 +56,7 @@ function NotifCard({ notif }) {
         <p className="text-[10px] text-muted-foreground mt-1">{timeAgo(notif.timestamp)}</p>
       </div>
       {!notif.read && (
-        <span className={`shrink-0 w-2 h-2 rounded-full mt-1.5 ${cfg.dot}`} />
+        <span className={`shrink-0 w-2 h-2 rounded-full mt-1.5 ${cfg.color.replace('text-', 'bg-')}`} />
       )}
     </div>
   );
@@ -133,7 +125,7 @@ export default function NotificationBell({ className = '' }) {
       {open && (
         <div
           ref={panelRef}
-          className="absolute right-0 top-12 w-80 sm:w-96 bg-card/95 dark:bg-slate-900/95 backdrop-blur-xl border border-border rounded-2xl shadow-2xl shadow-slate-200/50 dark:shadow-slate-900/50 z-[9999] overflow-hidden animate-in fade-in zoom-in-95 slide-in-from-top-2 duration-200"
+          className="absolute right-0 top-12 w-80 sm:w-96 bg-card backdrop-blur-2xl border border-border rounded-2xl shadow-2xl z-[9999] overflow-hidden animate-in fade-in zoom-in-95 slide-in-from-top-2 duration-200"
         >
           {/* Header */}
           <div className="flex items-center justify-between px-4 py-3 border-b border-border/60">
@@ -142,8 +134,8 @@ export default function NotificationBell({ className = '' }) {
               <span className="text-sm font-black text-foreground">Live Notifications</span>
               <span className={`flex items-center gap-1 text-[9px] font-black uppercase tracking-widest px-2 py-0.5 rounded-full ${
                 isConnected
-                  ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-400'
-                  : 'bg-slate-100 text-slate-500 dark:bg-slate-800 dark:text-slate-400'
+                  ? 'bg-emerald-500/10 text-emerald-600'
+                  : 'bg-slate-500/10 text-slate-500'
               }`}>
                 {isConnected
                   ? <><Wifi className="w-2.5 h-2.5" /> Live</>

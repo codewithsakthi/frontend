@@ -8,10 +8,12 @@ export const useThemeStore = create(
       toggleTheme: () => set((state) => {
         const nextTheme = state.theme === 'dark' ? 'light' : 'dark';
         document.documentElement.setAttribute('data-theme', nextTheme);
+        document.documentElement.classList.toggle('dark', nextTheme === 'dark');
         return { theme: nextTheme };
       }),
       setTheme: (theme) => {
         document.documentElement.setAttribute('data-theme', theme);
+        document.documentElement.classList.toggle('dark', theme === 'dark');
         set({ theme });
       },
     }),
