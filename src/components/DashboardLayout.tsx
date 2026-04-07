@@ -6,6 +6,7 @@ import ThemeToggle from './ThemeToggle';
 import MobileBottomNav from './MobileBottomNav';
 import SpotlightSearch from './SpotlightSearch';
 import AICommandBar from './AICommandBar';
+import NotificationBell from './NotificationBell';
 import { useThemeStore } from '../store/themeStore';
 import { useAuthStore } from '../store/authStore';
 
@@ -146,10 +147,7 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
 
             <ThemeToggle theme={theme} onToggle={toggleTheme} className="scale-90 !px-2.5 !py-1.5" />
 
-            <button className="relative rounded-full p-2 text-muted-foreground hover:bg-muted transition-colors">
-              <Bell size={18} />
-              <span className="absolute top-1.5 right-1.5 h-2 w-2 rounded-full bg-rose-500 ring-2 ring-background" />
-            </button>
+            <NotificationBell />
 
             <div className="hidden md:block h-8 w-[1px] bg-border/40" />
 

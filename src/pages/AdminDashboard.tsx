@@ -47,6 +47,7 @@ import { useAuthStore } from "../store/authStore";
 import { useThemeStore } from "../store/themeStore";
 import StudentProfile360 from "../components/StudentProfile360";
 import AICopilot from "../components/AICopilot";
+import NotificationBell from "../components/NotificationBell";
 import { isGradedSubject } from "../utils/subjectFilters";
 import type {
   AdminCohortAction,
@@ -233,13 +234,16 @@ function FacultyCard({ item }: { item: FacultyImpactMatrixItem }) {
 }
 
 function exportWithToken(path: string, filename: string) {
-  const token = localStorage.getItem("auth-storage");
+  const token = localStorage.getItem("spark-auth-storage");
 
   const parsed = token ? JSON.parse(token) : null;
 
   const accessToken = parsed?.state?.token;
 
-  return fetch(`${api.defaults.baseURL}${path}`, {
+  // Ensure path doesn't start with / to avoid double-slash
+  const cleanPath = path.startsWith('/') ? path.slice(1) : path;
+
+  return fetch(`${api.defaults.baseURL}/${cleanPath}`, {
     headers: accessToken ? { Authorization: `Bearer ${accessToken}` } : {},
   })
     .then(async (response) => {
@@ -370,7 +374,7 @@ function AdminPasswordChangeForm() {
 }
 
 // Subjects Management Panel Component
-function SubjectsManagementPanel() {
+function SubjectsManagementPanel({ studentBatchFilter, studentSectionFilter }: { studentBatchFilter: string; studentSectionFilter: string }) {
   const [semesterFilter, setSemesterFilter] = useState("ALL");
   const [statusFilter, setStatusFilter] = useState("ALL"); // Added status filter
   const [subjectCatalog, setSubjectCatalog] = useState([]);
@@ -1506,6 +1510,7 @@ export default function AdminDashboard() {
           "Security",
           "Profile",
           "Staff",
+          "Subjects",
         ].map((tab) => (
           <button
             key={tab}
@@ -1545,25 +1550,12 @@ export default function AdminDashboard() {
                 className="hero-button"
                 onClick={() =>
                   exportWithToken(
-                    "admin/exports/batch-summary.xlsx",
+                    "/admin/export/batch-summary",
                     "mca-batch-summary.xlsx",
                   )
                 }
               >
                 <Download size={16} />
-                Excel Summary
-              </button>
-
-              <button
-                type="button"
-                className="hero-button"
-                onClick={() => refetch()}
-              >
-                <RefreshCw
-                  size={16}
-                  className={isFetching ? "animate-spin" : ""}
-                />
-                Refresh
               </button>
             </div>
           </header>
@@ -3393,7 +3385,12 @@ export default function AdminDashboard() {
         </div>
       )}
 
-      {activeTab === "Subjects" && <SubjectsManagementPanel />}
+      {activeTab === "Subjects" && (
+        <SubjectsManagementPanel
+          studentBatchFilter={studentBatchFilter}
+          studentSectionFilter={studentSectionFilter}
+        />
+      )}
 
       <StudentProfile360 rollNo={selectedRollNo} onClose={handleCloseProfile} />
     </div>

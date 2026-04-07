@@ -27,6 +27,7 @@ import StaffInsightsPanel from '../components/StaffInsightsPanel';
 import { SectionTitle } from '../components/DashboardComponents';
 import { useAuthStore } from '../store/authStore';
 import { mapStaffDashboard } from '../api/mappers';
+import NotificationBell from '../components/NotificationBell';
 
 const StatCard = ({ label, value, hint, icon: Icon, trend }) => (
   <div className="metric-card group overflow-hidden relative">
@@ -172,6 +173,7 @@ export default function StaffDashboard() {
               <CalendarDays size={18} />
               <span className="text-sm font-semibold">{staff?.department || 'MCA Department'}</span>
             </div>
+            <NotificationBell className="!text-white" />
           </div>
         </div>
       </header>

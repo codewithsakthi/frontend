@@ -17,6 +17,7 @@ import StudentTimetable from '../components/StudentTimetable';
 import api from '../api/client';
 import { buildStudentIntelligence, fmt, num, CHART_COLORS, GRADE_POINTS } from '../services/academicService';
 import { mapAttendanceSummary, mapCurrentUser, mapStudentPerformance } from '../api/mappers';
+import NotificationBell from '../components/NotificationBell';
 
 // Redundant component definitions removed - imported from DashboardComponents
 
@@ -267,6 +268,9 @@ const Dashboard = () => {
             <span className="w-1 h-1 rounded-full bg-muted-foreground/30" />
             <span className="flex items-center gap-1.5 text-foreground font-semibold">Roll No: {rollNo}</span>
           </div>
+        </div>
+        <div className="relative z-10 flex items-center gap-3">
+          <NotificationBell />
         </div>
       </header>
 

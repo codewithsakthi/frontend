@@ -3,9 +3,10 @@ import { useMutation, useQueryClient, useQuery } from '@tanstack/react-query';
 import {
   Users, AlertCircle, CheckCircle2, Loader2, Send, ShieldAlert, Clock, 
   BookOpen, ChevronDown, ChevronUp, Search, Mic, MicOff, Volume2, 
-  Trash2, Filter
+  Trash2, Filter, History
 } from 'lucide-react';
 import api from '../api/client';
+import EditAttendanceModal from './EditAttendanceModal';
 
 export default function AttendancePanel({ subjects }) {
   const queryClient = useQueryClient();
@@ -16,7 +17,11 @@ export default function AttendancePanel({ subjects }) {
   const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
   const [error, setError] = useState('');
   const [showTodaySummary, setShowTodaySummary] = useState(false);
-  
+  const [showEditModal, setShowEditModal] = useState(false);
+
+  // Section selection — auto-filled from the assigned subject's section
+  const [selectedSection, setSelectedSection] = useState(subjects[0]?.section || '');
+
   // Search and Filter for subjects
   const [subjectSearch, setSubjectSearch] = useState('');
   const [semesterFilter, setSemesterFilter] = useState('');
@@ -43,6 +48,17 @@ export default function AttendancePanel({ subjects }) {
   const selectedSubject = subjects.find(s => s.subject_id === parseInt(selectedSubjectId));
   const isSubstitute = !!selectedSubjectId && !selectedSubject;
 
+  // Derive available sections for the selected subject from the assigned subjects list
+  // A staff may be assigned to the same subject for multiple sections
+  const availableSections = React.useMemo(() => {
+    const secs = subjects
+      .filter(s => s.subject_id === parseInt(selectedSubjectId))
+      .map(s => s.section)
+      .filter(Boolean);
+    // Deduplicate
+    return [...new Set(secs)];
+  }, [subjects, selectedSubjectId]);
+
   // Fetch all subjects for substitute mode
   const { data: allSubjects = [], isLoading: isLoadingAllSubjects } = useQuery({
     queryKey: ['all-subjects-for-attendance'],
@@ -66,12 +82,11 @@ export default function AttendancePanel({ subjects }) {
   const isMarkedAsSubstitute = selectedOption?._is_other;
 
   const { data: students = [], isLoading: isLoadingStudents } = useQuery({
-    queryKey: ['staff-subject-students', selectedSubjectId],
+    queryKey: ['staff-subject-students', selectedSubjectId, selectedSection],
     queryFn: async () => {
       if (!selectedSubjectId) return [];
-      console.log("Fetching students for subject:", selectedSubjectId);
-      const data = await api.get(`staff/subjects/${selectedSubjectId}/students`);
-      console.log("Students API response (unwrapped):", data);
+      const sectionParam = selectedSection ? `?section=${encodeURIComponent(selectedSection)}` : '';
+      const data = await api.get(`staff/subjects/${selectedSubjectId}/students${sectionParam}`);
       const studentsData = Array.isArray(data) ? data : (data?.students || []);
       return studentsData;
     },
@@ -112,6 +127,7 @@ export default function AttendancePanel({ subjects }) {
       absentees,
       od_list: odList,
       semester: selectedOption.semester || 1,
+      section: selectedSection || undefined,
     });
   };
 
@@ -333,12 +349,21 @@ export default function AttendancePanel({ subjects }) {
     setShowConfirmation(true);
   };
 
-  React.useEffect(() => { 
-    setAbsentees([]); 
+  // When subject changes, auto-set section from the assignment and reset attendance state
+  React.useEffect(() => {
+    const assignedSection = subjects.find(s => s.subject_id === parseInt(selectedSubjectId))?.section || '';
+    setSelectedSection(assignedSection);
+    setAbsentees([]);
     setOdList([]);
     setStudentSearch('');
     setStudentSearchDraft('');
   }, [selectedSubjectId]);
+
+  // Reset attendance when section changes
+  React.useEffect(() => {
+    setAbsentees([]);
+    setOdList([]);
+  }, [selectedSection]);
 
   if (!subjects?.length) {
     return (
@@ -410,23 +435,32 @@ export default function AttendancePanel({ subjects }) {
           </div>
         </div>
       )}
-      {/* Today's Summary Toggle */}
-      <div className="panel backdrop-blur-md">
-        <button
-          onClick={() => { setShowTodaySummary(v => !v); refetchSummary(); }}
-          className="flex items-center justify-between w-full p-2"
-        >
-          <div className="flex items-center gap-3">
-            <div className="w-8 h-8 rounded-lg bg-indigo-50 flex items-center justify-center">
-              <Clock size={16} className="text-indigo-600" />
+      {/* Edit Attendance Modal */}
+      {showEditModal && (
+        <EditAttendanceModal
+          subjects={subjects}
+          onClose={() => setShowEditModal(false)}
+        />
+      )}
+
+      {/* Today's Summary Toggle + Edit Button row */}
+      <div className="flex items-stretch gap-3">
+        <div className="panel backdrop-blur-md flex-1">
+          <button
+            onClick={() => { setShowTodaySummary(v => !v); refetchSummary(); }}
+            className="flex items-center justify-between w-full p-2"
+          >
+            <div className="flex items-center gap-3">
+              <div className="w-8 h-8 rounded-lg bg-indigo-50 flex items-center justify-center">
+                <Clock size={16} className="text-indigo-600" />
+              </div>
+              <div className="text-left">
+                <span className="block font-bold text-sm text-slate-800">Today's Attendance Log</span>
+                <span className="block text-[10px] text-slate-400 uppercase tracking-tighter">View recently marked periods</span>
+              </div>
             </div>
-            <div className="text-left">
-              <span className="block font-bold text-sm text-slate-800">Today's Attendance Log</span>
-              <span className="block text-[10px] text-slate-400 uppercase tracking-tighter">View recently marked periods</span>
-            </div>
-          </div>
-          {showTodaySummary ? <ChevronUp size={16} className="text-slate-400" /> : <ChevronDown size={16} className="text-slate-400" />}
-        </button>
+            {showTodaySummary ? <ChevronUp size={16} className="text-slate-400" /> : <ChevronDown size={16} className="text-slate-400" />}
+          </button>
 
         {showTodaySummary && (
           <div className="mt-4 overflow-hidden rounded-xl border border-slate-100">
@@ -473,6 +507,18 @@ export default function AttendancePanel({ subjects }) {
             )}
           </div>
         )}
+        </div>
+
+        {/* Edit Past Attendance Button */}
+        <button
+          onClick={() => setShowEditModal(true)}
+          className="panel flex flex-col items-center justify-center gap-2 px-5 min-w-[100px] hover:border-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-950/20 transition-all group cursor-pointer shrink-0"
+        >
+          <div className="w-8 h-8 rounded-lg bg-indigo-50 group-hover:bg-indigo-100 flex items-center justify-center transition-colors">
+            <History size={16} className="text-indigo-600" />
+          </div>
+          <span className="text-[10px] font-black uppercase tracking-tighter text-slate-600 dark:text-slate-300 text-center">Edit Past</span>
+        </button>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -520,11 +566,49 @@ export default function AttendancePanel({ subjects }) {
                 >
                   {filteredSubjects.map(s => (
                     <option key={s.subject_id} value={s.subject_id}>
-                      {s.course_code} - {s.name}
+                      {s.course_code} - {s.name || s.subject_name}
                     </option>
                   ))}
                   {filteredSubjects.length === 0 && <option value="">No subjects found</option>}
                 </select>
+              </div>
+
+              {/* Section Selector */}
+              <div className="space-y-2">
+                <label className="text-[10px] font-black uppercase tracking-widest text-slate-400">Section</label>
+                <div className="grid grid-cols-3 gap-2">
+                  {/* Show assigned sections as primary options */}
+                  {(availableSections.length > 0 ? availableSections : ['A', 'B']).map(sec => (
+                    <button
+                      key={sec}
+                      type="button"
+                      onClick={() => setSelectedSection(sec)}
+                      className={`py-2 rounded-xl border-2 text-sm font-black uppercase tracking-widest transition-all active:scale-95 ${
+                        selectedSection === sec
+                          ? 'bg-indigo-600 border-indigo-600 text-white shadow-lg shadow-indigo-200'
+                          : 'bg-muted/50 border-border text-slate-500 hover:border-indigo-300 hover:text-indigo-600'
+                      }`}
+                    >
+                      Sec {sec}
+                    </button>
+                  ))}
+                  <button
+                    type="button"
+                    onClick={() => setSelectedSection('')}
+                    className={`py-2 rounded-xl border-2 text-sm font-black uppercase tracking-widest transition-all active:scale-95 ${
+                      selectedSection === ''
+                        ? 'bg-slate-700 border-slate-700 text-white'
+                        : 'bg-muted/50 border-border text-slate-400 hover:border-slate-400'
+                    }`}
+                  >
+                    All
+                  </button>
+                </div>
+                {selectedSection && (
+                  <p className="text-[10px] text-indigo-500 font-semibold">
+                    Showing Section {selectedSection} students only
+                  </p>
+                )}
               </div>
 
               <div className="grid grid-cols-2 gap-4 pt-2">
@@ -733,9 +817,20 @@ export default function AttendancePanel({ subjects }) {
                 </div>
                 <div>
                   <h3 className="text-lg font-bold text-slate-800">Student Roster</h3>
-                  <p className="text-[10px] font-medium text-slate-400 uppercase tracking-widest">
-                     {students?.length || 0} enrolled students
-                  </p>
+                  <div className="flex items-center gap-2 mt-0.5">
+                    <p className="text-[10px] font-medium text-slate-400 uppercase tracking-widest">
+                      {students?.length || 0} students
+                    </p>
+                    {selectedSection ? (
+                      <span className="px-2 py-0.5 rounded-full bg-indigo-100 text-indigo-700 text-[9px] font-black uppercase tracking-widest border border-indigo-200">
+                        Section {selectedSection}
+                      </span>
+                    ) : (
+                      <span className="px-2 py-0.5 rounded-full bg-slate-100 text-slate-500 text-[9px] font-black uppercase tracking-widest">
+                        All Sections
+                      </span>
+                    )}
+                  </div>
                 </div>
               </div>
               
