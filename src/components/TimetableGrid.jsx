@@ -47,8 +47,8 @@ export default function TimetableGrid({ entries = [], title = 'Weekly Timetable'
         )}
       </div>
 
-      <div className="pb-2">
-        <div className="w-full border border-border/70 rounded-xl md:rounded-[2rem] overflow-hidden bg-[var(--panel)] shadow-[0_8px_30px_rgba(2,6,23,0.5)] md:shadow-[0_18px_45px_rgba(2,6,23,0.85)]">
+      <div className="pb-2 -mx-4 sm:mx-0">
+        <div className="border-y sm:border border-border/70 sm:rounded-xl md:rounded-[2rem] overflow-hidden bg-[var(--panel)] shadow-[0_8px_30px_rgba(2,6,23,0.5)] md:shadow-[0_18px_45px_rgba(2,6,23,0.85)]">
           <div className="grid grid-cols-8 divide-x divide-border bg-muted/30">
             <div className="p-1 md:p-4" />
             {HOURS.map((hour) => (

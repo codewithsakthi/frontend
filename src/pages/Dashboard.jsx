@@ -484,7 +484,7 @@ const Dashboard = () => {
             </div>
           </div>
 
-          <div className="glass rounded-[2.5rem] p-8 card-premium col-span-12">
+          <div className="glass rounded-2xl sm:rounded-[2.5rem] p-4 sm:p-8 card-premium col-span-12 overflow-hidden">
             <StudentTimetable semesterOverride={2} />
           </div>
         </div>
