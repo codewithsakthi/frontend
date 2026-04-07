@@ -10,22 +10,22 @@ export default function MarksEntry({ subject, onClose }) {
 
   // Fetch students for this subject
   const { data: students, isLoading } = useQuery({
-    queryKey: ['staff-subject-students', subject.subject_id],
-    queryFn: () => api.get(`staff/subjects/${subject.subject_id}/students`),
+    queryKey: ['staff-subject-marks', subject.subject_id],
+    queryFn: () => api.get(`staff/subjects/${subject.subject_id}/marks`),
   });
 
   useEffect(() => {
     if (students) {
       setLocalMarks(students.map(s => ({
-        student_id: s.id || 0, // Assuming id exists or handle roll_no
+        student_id: s.student_id,
         roll_no: s.roll_no,
         name: s.name,
         subject_id: subject.subject_id,
         semester: subject.semester,
-        cit1_marks: s.cit1_marks || 0,
-        cit2_marks: s.cit2_marks || 0,
-        cit3_marks: s.cit3_marks || 0,
-        semester_exam_marks: s.semester_exam_marks || 0
+        cit1_marks: s.cit1 ?? 0,
+        cit2_marks: s.cit2 ?? 0,
+        cit3_marks: s.cit3 ?? 0,
+        semester_exam_marks: s.semester_exam ?? 0
       })));
     }
   }, [students, subject]);
@@ -50,25 +50,49 @@ export default function MarksEntry({ subject, onClose }) {
   };
 
   const handleSave = () => {
-    // Prepare updates list
-    const updates = localMarks.map(m => ({
-      student_id: m.student_id,
-      subject_id: m.subject_id,
-      semester: m.semester,
-      cit1_marks: m.cit1_marks,
-      cit2_marks: m.cit2_marks,
-      cit3_marks: m.cit3_marks,
-      semester_exam_marks: m.semester_exam_marks
-    }));
+    // ── Delta Update Logic ──
+    // Only send marks that have actually changed since the last fetch
+    const updates = [];
+    
+    localMarks.forEach(m => {
+      const original = students?.find(s => s.student_id === m.student_id);
+      if (!original) return;
+
+      const base = {
+        student_id: m.student_id,
+        subject_id: m.subject_id,
+        semester: m.semester,
+      };
+
+      // Individual field comparison
+      if (m.cit1_marks !== (original.cit1 ?? 0)) {
+        updates.push({ ...base, assessment_type: 'CIT1', marks: m.cit1_marks });
+      }
+      if (m.cit2_marks !== (original.cit2 ?? 0)) {
+        updates.push({ ...base, assessment_type: 'CIT2', marks: m.cit2_marks });
+      }
+      if (m.cit3_marks !== (original.cit3 ?? 0)) {
+        updates.push({ ...base, assessment_type: 'CIT3', marks: m.cit3_marks });
+      }
+      if (m.semester_exam_marks !== (original.semester_exam ?? 0)) {
+        updates.push({ ...base, assessment_type: 'SEMESTER_EXAM', marks: m.semester_exam_marks });
+      }
+    });
+
+    if (updates.length === 0) {
+      setIsDirty(false);
+      return;
+    }
+
     mutation.mutate(updates);
   };
 
   if (isLoading) return <div className="flex items-center justify-center p-12"><Loader2 className="animate-spin" /></div>;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-background/80 backdrop-blur-sm p-4">
-      <div className="w-full max-w-5xl bg-card border border-border rounded-3xl shadow-2xl overflow-hidden flex flex-col max-h-[90vh]">
-        <header className="p-6 border-b border-border flex items-center justify-between bg-muted/30">
+    <div className="fixed inset-0 z-50 flex flex-col bg-background overflow-hidden animate-in fade-in duration-200">
+      <div className="w-full h-full flex flex-col">
+        <header className="px-8 py-6 border-b border-border flex items-center justify-between bg-muted/10">
           <div>
             <h2 className="text-xl font-bold">{subject.subject_name}</h2>
             <p className="text-sm text-muted-foreground">{subject.course_code} | Semester {subject.semester} | Section {subject.section || 'A'}</p>
@@ -93,8 +117,9 @@ export default function MarksEntry({ subject, onClose }) {
           </div>
         </header>
 
-        <div className="flex-1 overflow-auto p-6">
-          <table className="w-full text-sm border-collapse">
+        <div className="flex-1 overflow-auto p-8 flex justify-center">
+          <div className="w-full max-w-6xl">
+            <table className="w-full text-sm border-collapse">
             <thead className="sticky top-0 bg-card z-10">
               <tr className="border-b border-border text-left">
                 <th className="py-3 px-4 font-black uppercase tracking-widest text-[10px] text-muted-foreground">Roll No</th>
@@ -146,6 +171,7 @@ export default function MarksEntry({ subject, onClose }) {
               ))}
             </tbody>
           </table>
+          </div>
         </div>
       </div>
     </div>

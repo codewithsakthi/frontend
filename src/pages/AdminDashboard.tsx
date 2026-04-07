@@ -41,6 +41,8 @@ import {
   Activity,
   Plus,
   Edit3,
+  Trash2,
+  Edit,
 } from "lucide-react";
 import api from "../api/client";
 import { useAuthStore } from "../store/authStore";
@@ -707,6 +709,7 @@ export default function AdminDashboard() {
 
   const queryClient = useQueryClient();
 
+  const [editingTimetable, setEditingTimetable] = useState<any>(null);
   const setActiveTab = (tab: string) => {
     const params = new URLSearchParams(searchParams);
 
@@ -1257,25 +1260,38 @@ export default function AdminDashboard() {
 
   // Timetable mutations
   const createTimetableMutation = useMutation({
-    mutationFn: (data: typeof timetableForm) => api.post("admin/timetables", data),
+    mutationFn: (data: any) => api.post("admin/timetables", data),
     onSuccess: () => {
-      setShowTimetableForm(false);
-      setTimetableForm({
-        batch: "",
-        section: "A", 
-        day_of_week: 1,
-        period: 1,
-        subject_id: null,
-        faculty_id: null,
-        room_number: "",
-        academic_year: "2024-25",
-        semester: 1
-      });
+      setSelectedCell(null);
       refetchTimetables();
     },
     onError: (error: any) => {
       console.error("Error creating timetable:", error);
       alert(error.response?.data?.detail || "Failed to create timetable entry");
+    }
+  });
+
+  const updateTimetableMutation = useMutation({
+    mutationFn: ({ id, data }: { id: number; data: any }) => api.put(`admin/timetables/${id}`, data),
+    onSuccess: () => {
+      setSelectedCell(null);
+      setEditingTimetable(null);
+      refetchTimetables();
+    },
+    onError: (error: any) => {
+      console.error("Error updating timetable:", error);
+      alert(error.response?.data?.detail || "Failed to update timetable entry");
+    }
+  });
+
+  const deleteTimetableMutation = useMutation({
+    mutationFn: (id: number) => api.delete(`admin/timetables/${id}`),
+    onSuccess: () => {
+      refetchTimetables();
+    },
+    onError: (error: any) => {
+      console.error("Error deleting timetable:", error);
+      alert(error.response?.data?.detail || "Failed to delete timetable entry");
     }
   });
 
@@ -2450,56 +2466,56 @@ export default function AdminDashboard() {
 
             {/* Timetable Grid */}
             {selectedBatch && selectedTimetableSemester ? (
-              <div className="overflow-x-auto border rounded-lg">
+              <div className="overflow-x-auto border rounded-xl custom-scrollbar">
                 <table className="w-full border-collapse">
                   <thead>
                     <tr className="bg-muted/50">
-                      <th className="border border-border p-3 text-left font-semibold w-24">
+                      <th className="border border-border p-3 text-left font-semibold w-20">
                         Day
                       </th>
-                      <th className="border border-border p-3 text-center font-semibold min-w-24">
+                      <th className="border border-border p-3 text-center font-semibold min-w-20">
                         1<br/>
                         <span className="text-xs font-normal text-muted-foreground">
                           9:15-10:05
                         </span>
                       </th>
-                      <th className="border border-border p-3 text-center font-semibold min-w-24">
+                      <th className="border border-border p-3 text-center font-semibold min-w-20">
                         2<br/>
                         <span className="text-xs font-normal text-muted-foreground">
                           10:05-10:55
                         </span>
                       </th>
-                      <th className="border border-border p-3 text-center font-semibold min-w-24">
+                      <th className="border border-border p-3 text-center font-semibold min-w-20">
                         3<br/>
                         <span className="text-xs font-normal text-muted-foreground">
                           11:10-12:00
                         </span>
                       </th>
-                      <th className="border border-border p-3 text-center font-semibold min-w-24">
+                      <th className="border border-border p-3 text-center font-semibold min-w-20">
                         4<br/>
                         <span className="text-xs font-normal text-muted-foreground">
                           12:00-12:50
                         </span>
                       </th>
-                      <th className="border border-border p-3 text-center font-semibold bg-slate-50 dark:bg-slate-900/20 text-foreground min-w-24">
+                      <th className="border border-border p-3 text-center font-semibold bg-slate-50 dark:bg-slate-900/20 text-foreground min-w-20">
                         LUNCH<br/>
                         <span className="text-xs font-normal text-muted-foreground">
                           12:50-1:30
                         </span>
                       </th>
-                      <th className="border border-border p-3 text-center font-semibold min-w-24">
+                      <th className="border border-border p-3 text-center font-semibold min-w-20">
                         5<br/>
                         <span className="text-xs font-normal text-muted-foreground">
                           1:30-2:20
                         </span>
                       </th>
-                      <th className="border border-border p-3 text-center font-semibold min-w-24">
+                      <th className="border border-border p-3 text-center font-semibold min-w-20">
                         6<br/>
                         <span className="text-xs font-normal text-muted-foreground">
                           2:20-3:10
                         </span>
                       </th>
-                      <th className="border border-border p-3 text-center font-semibold min-w-24">
+                      <th className="border border-border p-3 text-center font-semibold min-w-20">
                         7<br/>
                         <span className="text-xs font-normal text-muted-foreground">
                           3:10-4:00
@@ -2534,19 +2550,46 @@ export default function AdminDashboard() {
                             >
                               <div className="space-y-1">
                                 {existingSlots.map((slot, idx) => (
-                                  <div key={idx} className="text-xs">
-                                    <div className="font-bold">
-                                      {slot.section}: {slot.subject_code || 'Break'}
+                                  <div key={idx} className="text-xs group/slot relative bg-muted/40 p-1.5 rounded-lg border border-border/50">
+                                    <div className="flex items-start justify-between gap-1">
+                                      <div className="font-bold text-primary flex-1">
+                                        {slot.section}: {slot.subject_name || slot.subject_code || 'Break'}
+                                      </div>
+                                      <div className="flex gap-1 opacity-0 group-hover/slot:opacity-100 transition-opacity">
+                                        <button 
+                                          onClick={(e) => {
+                                            e.stopPropagation();
+                                            setEditingTimetable(slot);
+                                            setSelectedCell({ day: slot.day_of_week, period: slot.period });
+                                          }}
+                                          className="p-1 hover:text-blue-600 transition-colors"
+                                          title="Edit Slot"
+                                        >
+                                          <Edit size={12} />
+                                        </button>
+                                        <button 
+                                          onClick={(e) => {
+                                            e.stopPropagation();
+                                            if (confirm('Delete this timetable slot?')) {
+                                              deleteTimetableMutation.mutate(slot.id);
+                                            }
+                                          }}
+                                          className="p-1 hover:text-rose-600 transition-colors"
+                                          title="Delete Slot"
+                                        >
+                                          <Trash2 size={12} />
+                                        </button>
+                                      </div>
                                     </div>
                                     {slot.faculty_name && (
-                                      <div className="text-muted-foreground truncate">
+                                      <div className="text-[10px] text-muted-foreground truncate italic">
                                         {slot.faculty_name}
                                       </div>
                                     )}
                                   </div>
                                 ))}
                                 {existingSlots.length === 0 && (
-                                  <div className="text-xs text-muted-foreground italic">
+                                  <div className="text-xs text-muted-foreground italic p-1">
                                     Click to add
                                   </div>
                                 )}
@@ -2574,19 +2617,46 @@ export default function AdminDashboard() {
                             >
                               <div className="space-y-1">
                                 {existingSlots.map((slot, idx) => (
-                                  <div key={idx} className="text-xs">
-                                    <div className="font-bold">
-                                      {slot.section}: {slot.subject_code || 'Break'}
+                                  <div key={idx} className="text-xs group/slot relative bg-muted/40 p-1.5 rounded-lg border border-border/50">
+                                    <div className="flex items-start justify-between gap-1">
+                                      <div className="font-bold text-primary flex-1">
+                                        {slot.section}: {slot.subject_name || slot.subject_code || 'Break'}
+                                      </div>
+                                      <div className="flex gap-1 opacity-0 group-hover/slot:opacity-100 transition-opacity">
+                                        <button 
+                                          onClick={(e) => {
+                                            e.stopPropagation();
+                                            setEditingTimetable(slot);
+                                            setSelectedCell({ day: slot.day_of_week, period: slot.period });
+                                          }}
+                                          className="p-1 hover:text-blue-600 transition-colors"
+                                          title="Edit Slot"
+                                        >
+                                          <Edit size={12} />
+                                        </button>
+                                        <button 
+                                          onClick={(e) => {
+                                            e.stopPropagation();
+                                            if (confirm('Delete this timetable slot?')) {
+                                              deleteTimetableMutation.mutate(slot.id);
+                                            }
+                                          }}
+                                          className="p-1 hover:text-rose-600 transition-colors"
+                                          title="Delete Slot"
+                                        >
+                                          <Trash2 size={12} />
+                                        </button>
+                                      </div>
                                     </div>
                                     {slot.faculty_name && (
-                                      <div className="text-muted-foreground truncate">
+                                      <div className="text-[10px] text-muted-foreground truncate italic">
                                         {slot.faculty_name}
                                       </div>
                                     )}
                                   </div>
                                 ))}
                                 {existingSlots.length === 0 && (
-                                  <div className="text-xs text-muted-foreground italic">
+                                  <div className="text-xs text-muted-foreground italic p-1">
                                     Click to add
                                   </div>
                                 )}
@@ -2619,13 +2689,13 @@ export default function AdminDashboard() {
             <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
               <div className="bg-background border border-border rounded-lg p-6 w-full max-w-md mx-4">
                 <h3 className="text-lg font-semibold mb-4">
-                  Assign Subject - {['', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'][selectedCell.day]} Period {selectedCell.period}
+                  {editingTimetable ? "Edit Slot" : "Assign Subject"} - {['', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'][selectedCell.day]} Period {selectedCell.period}
                 </h3>
                 
                 <form onSubmit={(e) => {
                   e.preventDefault();
                   const formData = new FormData(e.target as HTMLFormElement);
-                  const data = {
+                  const payload = {
                     batch: selectedBatch,
                     section: formData.get('section') as string,
                     day_of_week: selectedCell.day,
@@ -2637,12 +2707,21 @@ export default function AdminDashboard() {
                     semester: parseInt(selectedTimetableSemester)
                   };
                   
-                  createTimetableMutation.mutate(data);
+                  if (editingTimetable) {
+                    updateTimetableMutation.mutate({ id: editingTimetable.id, data: payload });
+                  } else {
+                    createTimetableMutation.mutate(payload);
+                  }
                 }} className="space-y-4">
                   
                   <div>
                     <label className="block text-sm font-medium mb-2">Section *</label>
-                    <select name="section" className="input w-full" required>
+                    <select 
+                      name="section" 
+                      className="input w-full" 
+                      required
+                      defaultValue={editingTimetable?.section || ""}
+                    >
                       <option value="">Select Section</option>
                       {availableSections?.map((section: string) => (
                         <option key={section} value={section}>{section}</option>
@@ -2652,7 +2731,11 @@ export default function AdminDashboard() {
 
                   <div>
                     <label className="block text-sm font-medium mb-2">Subject</label>
-                    <select name="subject_id" className="input w-full">
+                    <select 
+                      name="subject_id" 
+                      className="input w-full"
+                      defaultValue={editingTimetable?.subject_id || ""}
+                    >
                       <option value="">No Subject (Break)</option>
                       {subjectsLoading && <option disabled>Loading subjects...</option>}
                       {subjectsError && <option disabled>Error loading subjects</option>}
@@ -2661,22 +2744,17 @@ export default function AdminDashboard() {
                           {subject.course_code || subject.code} - {subject.name}
                         </option>
                       ))}
-                      {!subjectsLoading && !subjectsError && (!subjects || subjects.length === 0) && (
-                        <option disabled>No subjects found</option>
-                      )}
                     </select>
-                    {process.env.NODE_ENV === 'development' && (
-                      <div className="text-xs text-gray-500 mt-1">
-                        Debug: {subjects?.length || 0} subjects loaded, 
-                        Loading: {subjectsLoading ? 'Yes' : 'No'}, 
-                        Error: {subjectsError ? 'Yes' : 'No'}
-                      </div>
-                    )}
                   </div>
 
                   <div>
                     <label className="block text-sm font-medium mb-2">Faculty *</label>
-                    <select name="faculty_id" className="input w-full" required>
+                    <select 
+                      name="faculty_id" 
+                      className="input w-full" 
+                      required
+                      defaultValue={editingTimetable?.faculty_id || ""}
+                    >
                       <option value="">Select Faculty</option>
                       {staffDirectory?.map((staff: any) => (
                         <option key={staff.id} value={staff.id}>
@@ -2690,16 +2768,22 @@ export default function AdminDashboard() {
                     <button
                       type="button"
                       className="btn-ghost flex-1"
-                      onClick={() => setSelectedCell(null)}
+                      onClick={() => {
+                        setSelectedCell(null);
+                        setEditingTimetable(null);
+                      }}
                     >
                       Cancel
                     </button>
                     <button
                       type="submit"
                       className="btn-primary flex-1"
-                      disabled={createTimetableMutation.isPending}
+                      disabled={createTimetableMutation.isPending || updateTimetableMutation.isPending}
                     >
-                      {createTimetableMutation.isPending ? "Adding..." : "Add Slot"}
+                      {editingTimetable 
+                        ? (updateTimetableMutation.isPending ? "Updating..." : "Update Slot")
+                        : (createTimetableMutation.isPending ? "Adding..." : "Add Slot")
+                      }
                     </button>
                   </div>
                 </form>
