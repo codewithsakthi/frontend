@@ -22,10 +22,10 @@ export default function MarksEntry({ subject, onClose }) {
         name: s.name,
         subject_id: subject.subject_id,
         semester: subject.semester,
-        cit1_marks: s.cit1 ?? 0,
-        cit2_marks: s.cit2 ?? 0,
-        cit3_marks: s.cit3 ?? 0,
-        semester_exam_marks: s.semester_exam ?? 0
+        cit1_marks: s.cit1 ?? '',
+        cit2_marks: s.cit2 ?? '',
+        cit3_marks: s.cit3 ?? '',
+        semester_exam_marks: s.semester_exam ?? ''
       })));
     }
   }, [students, subject]);
@@ -40,8 +40,8 @@ export default function MarksEntry({ subject, onClose }) {
   });
 
   const handleMarkChange = (rollNo, field, value) => {
-    const numValue = value === '' ? 0 : parseFloat(value);
-    if (isNaN(numValue)) return;
+    const numValue = value === '' ? '' : parseFloat(value);
+    if (numValue !== '' && isNaN(numValue)) return;
     
     setLocalMarks(prev => prev.map(m => 
       m.roll_no === rollNo ? { ...m, [field]: numValue } : m
@@ -65,17 +65,20 @@ export default function MarksEntry({ subject, onClose }) {
       };
 
       // Individual field comparison
-      if (m.cit1_marks !== (original.cit1 ?? 0)) {
-        updates.push({ ...base, assessment_type: 'CIT1', marks: m.cit1_marks });
+      // Individual field comparison - Use strict check for NULL (empty string in local state)
+      const toBackendMark = (val) => val === '' ? null : val;
+
+      if (toBackendMark(m.cit1_marks) !== original.cit1) {
+        updates.push({ ...base, assessment_type: 'CIT1', marks: toBackendMark(m.cit1_marks) });
       }
-      if (m.cit2_marks !== (original.cit2 ?? 0)) {
-        updates.push({ ...base, assessment_type: 'CIT2', marks: m.cit2_marks });
+      if (toBackendMark(m.cit2_marks) !== original.cit2) {
+        updates.push({ ...base, assessment_type: 'CIT2', marks: toBackendMark(m.cit2_marks) });
       }
-      if (m.cit3_marks !== (original.cit3 ?? 0)) {
-        updates.push({ ...base, assessment_type: 'CIT3', marks: m.cit3_marks });
+      if (toBackendMark(m.cit3_marks) !== original.cit3) {
+        updates.push({ ...base, assessment_type: 'CIT3', marks: toBackendMark(m.cit3_marks) });
       }
-      if (m.semester_exam_marks !== (original.semester_exam ?? 0)) {
-        updates.push({ ...base, assessment_type: 'SEMESTER_EXAM', marks: m.semester_exam_marks });
+      if (toBackendMark(m.semester_exam_marks) !== original.semester_exam) {
+        updates.push({ ...base, assessment_type: 'SEMESTER_EXAM', marks: toBackendMark(m.semester_exam_marks) });
       }
     });
 

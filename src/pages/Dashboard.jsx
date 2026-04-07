@@ -358,24 +358,39 @@ const Dashboard = () => {
             </div>
           </div>
 
-          <div className="col-span-12 lg:col-span-5 glass rounded-[2.5rem] p-8 card-premium">
-            <SectionTitle title="Assessment Mastery" copy="Consistency across technical internal evaluations." />
-            <div className="h-80 w-full mt-6">
-              <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={marks.slice(-6)}>
-                  <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="var(--border)" strokeOpacity={0.3} />
-                  <XAxis dataKey="subject.course_code" axisLine={false} tickLine={false} tick={{ fontSize: 10, fill: 'var(--muted-foreground)' }} />
-                  <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: 'var(--muted-foreground)' }} />
-                  <Tooltip
-                    contentStyle={{ border: '1px solid var(--border)', borderRadius: '12px', background: 'var(--card)' }}
-                  />
-                  <Bar dataKey="internal_marks" name="Internal Marks" radius={[6, 6, 0, 0]} fill="var(--primary)">
-                    {marks.slice(-6).map((entry, index) => (
-                      <Cell key={`cell-${index}`} fill={entry.internal_marks >= 40 ? 'var(--primary)' : 'var(--destructive)'} opacity={0.8} />
-                    ))}
-                  </Bar>
-                </BarChart>
-              </ResponsiveContainer>
+          <div className="col-span-12 lg:col-span-5 glass rounded-[2.5rem] p-8 card-premium flex flex-col justify-between">
+            <div>
+              <SectionTitle title="Assessment Mastery" copy="Consistency across technical internal evaluations." />
+              <div className="h-64 w-full mt-6">
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart data={marks.slice(-6)}>
+                    <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="var(--border)" strokeOpacity={0.3} />
+                    <XAxis dataKey="subject.course_code" axisLine={false} tickLine={false} tick={{ fontSize: 10, fill: 'var(--muted-foreground)' }} />
+                    <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: 'var(--muted-foreground)' }} />
+                    <Tooltip
+                      contentStyle={{ border: '1px solid var(--border)', borderRadius: '12px', background: 'var(--card)' }}
+                    />
+                    <Bar dataKey="internal_marks" name="Internal Marks" radius={[6, 6, 0, 0]} fill="var(--primary)">
+                      {marks.slice(-6).map((entry, index) => (
+                        <Cell key={`cell-${index}`} fill={entry.internal_marks >= 40 ? 'var(--primary)' : 'var(--destructive)'} opacity={0.8} />
+                      ))}
+                    </Bar>
+                  </BarChart>
+                </ResponsiveContainer>
+              </div>
+            </div>
+
+            <div className="mt-8 pt-6 border-t border-border/50 grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-3">
+              {marks.slice(-6).map((m, i) => (
+                <div key={i} className="flex items-start gap-2 group">
+                  <span className="font-mono font-black text-[9px] text-primary bg-primary/5 px-2 py-0.5 rounded border border-primary/10 group-hover:bg-primary/10 transition-colors shrink-0">
+                    {m.subject?.course_code}
+                  </span>
+                  <span className="text-[10px] font-medium text-muted-foreground leading-tight">
+                    {m.subject?.name}
+                  </span>
+                </div>
+              ))}
             </div>
           </div>
 
