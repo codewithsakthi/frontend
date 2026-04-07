@@ -24,8 +24,7 @@ export default function MarksEntry({ subject, onClose }) {
         semester: subject.semester,
         cit1_marks: s.cit1 ?? '',
         cit2_marks: s.cit2 ?? '',
-        cit3_marks: s.cit3 ?? '',
-        semester_exam_marks: s.semester_exam ?? ''
+        cit3_marks: s.cit3 ?? ''
       })));
     }
   }, [students, subject]);
@@ -77,9 +76,6 @@ export default function MarksEntry({ subject, onClose }) {
       if (toBackendMark(m.cit3_marks) !== original.cit3) {
         updates.push({ ...base, assessment_type: 'CIT3', marks: toBackendMark(m.cit3_marks) });
       }
-      if (toBackendMark(m.semester_exam_marks) !== original.semester_exam) {
-        updates.push({ ...base, assessment_type: 'SEMESTER_EXAM', marks: toBackendMark(m.semester_exam_marks) });
-      }
     });
 
     if (updates.length === 0) {
@@ -130,7 +126,6 @@ export default function MarksEntry({ subject, onClose }) {
                 <th className="py-3 px-2 font-black uppercase tracking-widest text-[10px] text-muted-foreground w-20 text-center">CIT 1</th>
                 <th className="py-3 px-2 font-black uppercase tracking-widest text-[10px] text-muted-foreground w-20 text-center">CIT 2</th>
                 <th className="py-3 px-2 font-black uppercase tracking-widest text-[10px] text-muted-foreground w-20 text-center">CIT 3</th>
-                <th className="py-3 px-2 font-black uppercase tracking-widest text-[10px] text-muted-foreground w-24 text-center">Semester</th>
               </tr>
             </thead>
             <tbody>
@@ -160,14 +155,6 @@ export default function MarksEntry({ subject, onClose }) {
                       className="input-field text-center !py-1"
                       value={student.cit3_marks}
                       onChange={(e) => handleMarkChange(student.roll_no, 'cit3_marks', e.target.value)}
-                    />
-                  </td>
-                  <td className="py-3 px-2">
-                    <input 
-                      type="number" 
-                      className="input-field text-center !py-1"
-                      value={student.semester_exam_marks}
-                      onChange={(e) => handleMarkChange(student.roll_no, 'semester_exam_marks', e.target.value)}
                     />
                   </td>
                 </tr>
