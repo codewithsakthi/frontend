@@ -534,7 +534,38 @@ const Dashboard = () => {
               </div>
             </div>
 
-            <div className="overflow-x-auto rounded-2xl border border-border">
+            {/* Mobile card view */}
+            <div className="md:hidden space-y-3 mt-2">
+              {sortedMarks.length === 0 ? (
+                <p className="text-center text-muted-foreground italic py-8">No subjects matching your current filters.</p>
+              ) : (
+                sortedMarks.map((mark) => (
+                  <div key={mark.id} className="rounded-2xl border border-border bg-card/60 p-4 space-y-3">
+                    <div className="flex items-start justify-between gap-2">
+                      <div>
+                        <p className="font-mono font-black text-primary text-xs">{mark.subject?.course_code}</p>
+                        <p className="font-semibold text-sm leading-tight mt-0.5">{mark.subject?.name}</p>
+                      </div>
+                      <span className="px-2 py-0.5 rounded-md bg-muted text-xs font-black text-muted-foreground shrink-0">Sem {mark.semester}</span>
+                    </div>
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <span className={`text-lg font-black ${['U', 'F', 'FAIL', 'RA'].includes(mark.grade?.toUpperCase()) ? 'text-destructive' : 'text-foreground'}`}>
+                        {mark.grade || '-'}
+                      </span>
+                      <span className={`px-2 py-0.5 rounded-full text-[10px] font-black uppercase ${
+                        mark.result_status?.toUpperCase() === 'PASS'
+                          ? 'bg-emerald-500/10 text-emerald-500'
+                          : 'bg-rose-500/10 text-rose-500'
+                      }`}>{mark.result_status || '-'}</span>
+                      <span className="ml-auto font-bold text-sm">{mark.total_marks || '-'} pts</span>
+                    </div>
+                  </div>
+                ))
+              )}
+            </div>
+
+            {/* Desktop table view */}
+            <div className="hidden md:block overflow-x-auto rounded-2xl border border-border">
               <table className="w-full text-sm border-collapse">
                 <thead>
                   <tr className="bg-muted/30">
@@ -561,8 +592,8 @@ const Dashboard = () => {
                       </td>
                       <td className="px-4 py-4">
                         <span className={`px-2 py-0.5 rounded-full text-[10px] font-black uppercase ${
-                          mark.result_status?.toUpperCase() === 'PASS' 
-                            ? 'bg-emerald-500/10 text-emerald-500' 
+                          mark.result_status?.toUpperCase() === 'PASS'
+                            ? 'bg-emerald-500/10 text-emerald-500'
                             : 'bg-rose-500/10 text-rose-500'
                         }`}>
                           {mark.result_status || '-'}
@@ -596,7 +627,42 @@ const Dashboard = () => {
                 ))}
               </select>
             </div>
-            <div className="overflow-x-auto rounded-2xl border border-border mt-8">
+            {/* Mobile card view */}
+            <div className="md:hidden space-y-3 mt-6">
+              {sortedCitMarks.length === 0 ? (
+                <p className="text-center text-muted-foreground italic py-8">No internal assessment data found.</p>
+              ) : (
+                sortedCitMarks.map((mark) => (
+                  <div key={`cit-mobile-${mark.id}`} className="rounded-2xl border border-border bg-card/60 p-4 space-y-3">
+                    <div>
+                      <p className="font-mono font-black text-accent text-xs">{mark.subject?.course_code}</p>
+                      <p className="font-semibold text-sm leading-tight mt-0.5">{mark.subject?.name}</p>
+                    </div>
+                    <div className="grid grid-cols-4 gap-2">
+                      <div className="text-center">
+                        <p className="text-[9px] font-black uppercase tracking-wider text-muted-foreground">CIT 1</p>
+                        <p className="font-bold text-sm mt-1">{mark.cit1_marks ?? '-'}</p>
+                      </div>
+                      <div className="text-center">
+                        <p className="text-[9px] font-black uppercase tracking-wider text-muted-foreground">CIT 2</p>
+                        <p className="font-bold text-sm mt-1">{mark.cit2_marks ?? '-'}</p>
+                      </div>
+                      <div className="text-center">
+                        <p className="text-[9px] font-black uppercase tracking-wider text-muted-foreground">CIT 3</p>
+                        <p className="font-bold text-sm mt-1">{mark.cit3_marks ?? '-'}</p>
+                      </div>
+                      <div className="text-center">
+                        <p className="text-[9px] font-black uppercase tracking-wider text-muted-foreground">Total</p>
+                        <p className="font-black text-sm mt-1 text-primary">{mark.internal_total ?? '-'}</p>
+                      </div>
+                    </div>
+                  </div>
+                ))
+              )}
+            </div>
+
+            {/* Desktop table view */}
+            <div className="hidden md:block overflow-x-auto rounded-2xl border border-border mt-8">
               <table className="w-full text-sm border-collapse">
                 <thead>
                   <tr className="bg-muted/30">

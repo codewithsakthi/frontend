@@ -47,55 +47,60 @@ export default function TimetableGrid({ entries = [], title = 'Weekly Timetable'
         )}
       </div>
 
-      <div className="overflow-x-auto pb-2">
-        <div className="min-w-[1000px] border border-border/70 rounded-[2rem] overflow-hidden bg-[var(--panel)] shadow-[0_18px_45px_rgba(2,6,23,0.85)]">
+      <div className="pb-2">
+        <div className="w-full border border-border/70 rounded-xl md:rounded-[2rem] overflow-hidden bg-[var(--panel)] shadow-[0_8px_30px_rgba(2,6,23,0.5)] md:shadow-[0_18px_45px_rgba(2,6,23,0.85)]">
           <div className="grid grid-cols-8 divide-x divide-border bg-muted/30">
-            <div className="p-4" />
+            <div className="p-1 md:p-4" />
             {HOURS.map((hour) => (
               <div
                 key={hour}
-                className="p-4 text-center font-black text-[10px] uppercase tracking-widest text-foreground flex flex-col items-center justify-center"
+                className="p-1 md:p-4 text-center font-black text-[8px] md:text-[10px] uppercase tracking-widest text-foreground flex flex-col items-center justify-center"
               >
-                <span>Hour {hour}</span>
-                <span className="text-[9px] mt-1 text-foreground/85">{hourLabel(hour)}</span>
+                <span className="md:hidden">P{hour}</span>
+                <span className="hidden md:inline">Hour {hour}</span>
+                <span className="hidden md:block text-[9px] mt-1 text-foreground/85">{hourLabel(hour)}</span>
               </div>
             ))}
           </div>
 
           <div className="divide-y divide-border">
             {DAYS.map((day, dayIdx) => (
-              <div key={day} className="grid grid-cols-8 divide-x divide-border min-h-[96px]">
-                <div className="p-4 flex flex-col items-center justify-center bg-muted/20">
-                  <Clock size={16} className="text-muted-foreground mb-1" />
-                  <span className="text-[10px] font-black uppercase tracking-widest text-foreground">{day}</span>
+              <div key={day} className="grid grid-cols-8 divide-x divide-y-0 divide-border md:min-h-[96px]">
+                <div className="p-1 md:p-4 flex flex-col items-center justify-center bg-muted/20">
+                  <Clock size={12} className="text-muted-foreground hidden md:block md:mb-1" />
+                  <span className="text-[8px] md:text-[10px] font-black uppercase tracking-widest text-foreground">
+                    <span className="md:hidden">{day.slice(0, 3)}</span>
+                    <span className="hidden md:inline">{day}</span>
+                  </span>
                 </div>
                 {HOURS.map((hour) => {
                   const entry = getEntry(dayIdx, hour);
                   const isSenior = entry?.semester >= 3;
                   return (
-                    <div key={`${dayIdx}-${hour}`} className="p-2 group">
+                    <div key={`${dayIdx}-${hour}`} className="p-0.5 md:p-2 group">
                       {entry ? (
                         <div
-                          className={`h-full p-3 rounded-2xl border transition-all ${
+                          className={`flex flex-col items-center md:items-start justify-center md:justify-start h-full p-1 md:p-3 rounded-md md:rounded-2xl border transition-all overflow-hidden ${
                             isSenior
                               ? 'bg-violet-500/45 border-violet-400/90 group-hover:bg-violet-500/65 text-white'
                               : 'bg-emerald-500/40 border-emerald-400/90 group-hover:bg-emerald-500/60 text-emerald-50'
                           }`}
                         >
-                          <p className="text-[10px] font-black uppercase tracking-tight mb-1 text-white/85">
-                            {entry.course_code}
+                          <p className="text-[7px] md:text-[10px] font-black uppercase tracking-tight mb-0 md:mb-1 text-white/85 text-center md:text-left leading-[1.1] md:leading-tight break-words md:break-all">
+                            <span className="md:hidden line-clamp-3">{entry.subject_name}</span>
+                            <span className="hidden md:inline">{entry.course_code}</span>
                           </p>
-                          <p className="text-xs font-bold leading-tight line-clamp-2 text-white">
+                          <p className="hidden md:block text-xs font-bold leading-tight line-clamp-2 text-white">
                             {entry.subject_name}
                           </p>
-                          <div className="mt-2 flex items-center gap-2">
+                          <div className="hidden md:flex mt-2 items-center gap-2">
                             <span className="px-2 py-0.5 rounded-lg bg-white/15 text-[9px] font-black uppercase text-white">
                               Sec {entry.section}
                             </span>
                           </div>
                         </div>
                       ) : (
-                        <div className="h-full rounded-2xl border border-dashed border-border/40 bg-card/5 group-hover:bg-muted/25 transition-colors" />
+                        <div className="h-full min-h-[40px] md:min-h-0 rounded-md md:rounded-2xl border border-dashed border-border/40 bg-card/5 group-hover:bg-muted/25 transition-colors" />
                       )}
                     </div>
                   );
