@@ -43,11 +43,14 @@ import {
   Edit3,
   Trash2,
   Edit,
+  Settings,
+  X,
 } from "lucide-react";
 import api from "../api/client";
 import { useAuthStore } from "../store/authStore";
 import { useThemeStore } from "../store/themeStore";
 import StudentProfile360 from "../components/StudentProfile360";
+import { validatePassThreshold } from "../utils/performanceUtils";
 import AICopilot from "../components/AICopilot";
 import NotificationBell from "../components/NotificationBell";
 import { isGradedSubject } from "../utils/subjectFilters";
@@ -375,12 +378,186 @@ function AdminPasswordChangeForm() {
   );
 }
 
+function ThresholdConfigModal({ 
+  subject, 
+  isOpen, 
+  onClose, 
+  onSave 
+}: { 
+  subject: SubjectCatalogItem | null; 
+  isOpen: boolean; 
+  onClose: () => void; 
+  onSave: (subjectId: number, data: any) => void; 
+}) {
+  const [passThreshold, setPassThreshold] = useState<string>("");
+  const [percentileAverage, setPercentileAverage] = useState<string>("30");
+  const [percentileGood, setPercentileGood] = useState<string>("60");
+  const [percentileExcellent, setPercentileExcellent] = useState<string>("85");
+  const [error, setError] = useState<string>("");
+
+  useEffect(() => {
+    if (subject && isOpen) {
+      setPassThreshold(subject.pass_threshold?.toString() || "50");
+      setPercentileAverage(subject.percentile_average?.toString() || "30");
+      setPercentileGood(subject.percentile_good?.toString() || "60");
+      setPercentileExcellent(subject.percentile_excellent?.toString() || "85");
+      setError("");
+    }
+  }, [subject, isOpen]);
+
+  const handleSave = () => {
+    const threshold = parseFloat(passThreshold);
+    const pAvg = parseFloat(percentileAverage);
+    const pGood = parseFloat(percentileGood);
+    const pExc = parseFloat(percentileExcellent);
+    
+    // Validate hierarchy
+    if (pExc < pGood || pGood < pAvg || pAvg < 0 || pExc > 100) {
+      setError("Hierarchy must be: Excellent (max) >= Good >= Average >= 0");
+      return;
+    }
+
+    if (subject) {
+      onSave(subject.id, {
+        pass_threshold: threshold,
+        percentile_average: pAvg,
+        percentile_good: pGood,
+        percentile_excellent: pExc
+      });
+      onClose();
+    }
+  };
+
+  if (!isOpen || !subject) return null;
+
+  return (
+    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+      <div className="bg-background border border-border rounded-xl max-w-md w-full p-6 space-y-6">
+        <div className="flex items-center justify-between">
+          <h3 className="text-lg font-semibold text-foreground">
+            Configure Threshold
+          </h3>
+          <button 
+            onClick={onClose}
+            className="p-1 rounded-lg hover:bg-muted/50 transition-colors"
+          >
+            <X size={20} />
+          </button>
+        </div>
+
+        <div className="space-y-4">
+          <div>
+            <p className="text-sm text-muted-foreground mb-2">
+              Subject: <span className="font-mono text-accent">{subject.subject_code}</span> - {subject.subject_name}
+            </p>
+          </div>
+
+          <div className="space-y-2">
+            <label className="block text-sm font-medium text-foreground">
+              Pass Threshold (Minimum marks to pass)
+            </label>
+            <input
+              type="number"
+              min="0"
+              max="100"
+              step="0.1"
+              value={passThreshold}
+              onChange={(e) => {
+                setPassThreshold(e.target.value);
+                setError("");
+              }}
+              className="input-field w-full"
+              placeholder="e.g., 40"
+            />
+            {error && (
+              <p className="text-xs text-red-500">{error}</p>
+            )}
+          </div>
+
+          <div className="bg-muted/10 p-5 rounded-xl space-y-4 border border-border/40">
+            <p className="text-sm font-semibold text-foreground flex items-center gap-2">
+              <Zap size={16} className="text-primary" />
+              Performance Classification Rules
+            </p>
+            
+            <div className="grid grid-cols-1 gap-4">
+              <div className="space-y-1.5">
+                <div className="flex justify-between items-center text-xs">
+                  <span className="text-emerald-500 font-bold uppercase tracking-widest">Excellent</span>
+                  <span className="text-muted-foreground">Percentile &gt; {percentileExcellent}</span>
+                </div>
+                <input
+                  type="number"
+                  value={percentileExcellent}
+                  onChange={(e) => setPercentileExcellent(e.target.value)}
+                  className="input-field w-full !py-1.5 text-sm"
+                />
+              </div>
+
+              <div className="space-y-1.5">
+                <div className="flex justify-between items-center text-xs">
+                  <span className="text-blue-500 font-bold uppercase tracking-widest">Good</span>
+                  <span className="text-muted-foreground">Percentile {percentileGood}-{percentileExcellent}</span>
+                </div>
+                <input
+                  type="number"
+                  value={percentileGood}
+                  onChange={(e) => setPercentileGood(e.target.value)}
+                  className="input-field w-full !py-1.5 text-sm"
+                />
+              </div>
+
+              <div className="space-y-1.5">
+                <div className="flex justify-between items-center text-xs">
+                  <span className="text-yellow-500 font-bold uppercase tracking-widest">Average</span>
+                  <span className="text-muted-foreground">Percentile {percentileAverage}-{percentileGood}</span>
+                </div>
+                <input
+                  type="number"
+                  value={percentileAverage}
+                  onChange={(e) => setPercentileAverage(e.target.value)}
+                  className="input-field w-full !py-1.5 text-sm"
+                />
+              </div>
+
+              <div className="pt-2 border-t border-border/30">
+                <div className="flex justify-between items-center text-xs opacity-80">
+                  <span className="text-red-500 font-bold uppercase tracking-widest">At Risk</span>
+                  <span className="text-muted-foreground italic">Marks &lt; threshold OR percentile &lt; {percentileAverage}</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div className="flex gap-3">
+          <button
+            onClick={onClose}
+            className="flex-1 px-4 py-2 text-sm font-medium text-muted-foreground border border-border rounded-lg hover:bg-muted/50 transition-colors"
+          >
+            Cancel
+          </button>
+          <button
+            onClick={handleSave}
+            disabled={!passThreshold || error}
+            className="flex-1 px-4 py-2 text-sm font-medium bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+          >
+            Save Threshold
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // Subjects Management Panel Component
 function SubjectsManagementPanel({ studentBatchFilter, studentSectionFilter }: { studentBatchFilter: string; studentSectionFilter: string }) {
   const [semesterFilter, setSemesterFilter] = useState("ALL");
   const [statusFilter, setStatusFilter] = useState("ALL"); // Added status filter
   const [subjectCatalog, setSubjectCatalog] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
+  const [thresholdModalOpen, setThresholdModalOpen] = useState(false);
+  const [selectedSubject, setSelectedSubject] = useState<SubjectCatalogItem | null>(null);
   const queryClient = useQueryClient();
 
   // Fetch subjects
@@ -465,9 +642,76 @@ function SubjectsManagementPanel({ studentBatchFilter, studentSectionFilter }: {
     },
   });
 
+  // Update threshold mutation with optimistic updates
+  const updateThresholdMutation = useMutation({
+    mutationFn: ({ subjectId, data }: { subjectId: number; data: any }) => {
+      console.log("🔄 Updating thresholds for subject ID:", subjectId, "with payload:", data);
+      return api.patch(`admin/subjects/${subjectId}/thresholds`, data);
+    },
+    onMutate: async ({ subjectId, data }) => {
+      console.log("🔄 onMutate - Optimistically updating thresholds for subject:", subjectId);
+
+      // Cancel any outgoing refetches
+      await queryClient.cancelQueries({ queryKey: ["admin-subject-catalog", studentBatchFilter, studentSectionFilter] });
+
+      // Snapshot the previous value
+      const previousSubjects = queryClient.getQueryData([
+        "admin-subject-catalog", studentBatchFilter, studentSectionFilter,
+      ]);
+
+      // Optimistically update the UI
+      queryClient.setQueryData(["admin-subject-catalog", studentBatchFilter, studentSectionFilter], (old: any) => {
+        if (!old) return old;
+        return old.map((subject: any) =>
+          subject.id === subjectId
+            ? { ...subject, ...data }
+            : subject,
+        );
+      });
+
+      console.log("✅ Optimistic threshold update applied");
+
+      // Return context with the previous value
+      return { previousSubjects };
+    },
+    onSuccess: async (data) => {
+      console.log("✅ Threshold update successful:", data);
+      
+      // Refetch to ensure server state is in sync
+      await queryClient.invalidateQueries({
+        queryKey: ["admin-subject-catalog", studentBatchFilter, studentSectionFilter],
+        refetchType: "active",
+      });
+      
+      console.log("✅ Threshold refetch completed");
+    },
+    onError: (error, { subjectId }, context: any) => {
+      console.error("❌ Threshold update failed:", error);
+
+      // Rollback optimistic update on error
+      if (context?.previousSubjects) {
+        queryClient.setQueryData(
+          ["admin-subject-catalog", studentBatchFilter, studentSectionFilter],
+          context.previousSubjects,
+        );
+      }
+
+      alert(`Failed to update threshold: ${error.message || "Unknown error"}`);
+    },
+  });
+
   const handleToggleSubject = (subjectId: number) => {
     console.log("🖱️ Toggle button clicked for subject ID:", subjectId);
     toggleSubjectMutation.mutate(subjectId);
+  };
+
+  const handleConfigureThreshold = (subject: SubjectCatalogItem) => {
+    setSelectedSubject(subject);
+    setThresholdModalOpen(true);
+  };
+
+  const handleSaveThreshold = (subjectId: number, data: any) => {
+    updateThresholdMutation.mutate({ subjectId, data });
   };
 
   const groupedSubjects = useMemo(() => {
@@ -644,14 +888,24 @@ function SubjectsManagementPanel({ studentBatchFilter, studentSectionFilter }: {
                                 {subject.records} records
                               </span>
                             )}
+                            {subject.pass_threshold && (
+                              <span className="text-[10px] px-2 py-0.5 rounded-full bg-blue-500/10 text-blue-600 font-black uppercase tracking-wider">
+                                Pass: {subject.pass_threshold}%
+                              </span>
+                            )}
                           </div>
                           <span className="font-semibold text-foreground text-sm sm:text-base">
                             {subject.subject_name}
                           </span>
                         </div>
+                        {subject.pass_threshold && (
+                          <div className="text-xs text-muted-foreground">
+                            Performance analytics enabled • Threshold: {subject.pass_threshold}% minimum
+                          </div>
+                        )}
                       </div>
 
-                      <div className="flex items-center justify-between sm:justify-start gap-4 pt-4 sm:pt-0 border-t sm:border-t-0 border-border/40">
+                      <div className="flex items-center justify-between sm:justify-start gap-2 pt-4 sm:pt-0 border-t sm:border-t-0 border-border/40">
                         <span
                           className={`text-[10px] font-black uppercase tracking-widest px-3 py-1 rounded-full ${
                             subject.is_active
@@ -661,6 +915,15 @@ function SubjectsManagementPanel({ studentBatchFilter, studentSectionFilter }: {
                         >
                           {subject.is_active ? "Active" : "Inactive"}
                         </span>
+
+                        <button
+                          onClick={() => handleConfigureThreshold(subject)}
+                          disabled={updateThresholdMutation.isPending}
+                          className="p-1.5 text-blue-600 hover:bg-blue-500/10 rounded-lg transition-all active:scale-95"
+                          title="Configure Performance Threshold"
+                        >
+                          <Settings size={16} />
+                        </button>
 
                         <button
                           onClick={() => handleToggleSubject(subject.id)}
@@ -686,6 +949,17 @@ function SubjectsManagementPanel({ studentBatchFilter, studentSectionFilter }: {
             ))}
         </div>
       )}
+
+      {/* Threshold Configuration Modal */}
+      <ThresholdConfigModal
+        subject={selectedSubject}
+        isOpen={thresholdModalOpen}
+        onClose={() => {
+          setThresholdModalOpen(false);
+          setSelectedSubject(null);
+        }}
+        onSave={handleSaveThreshold}
+      />
     </div>
   );
 }

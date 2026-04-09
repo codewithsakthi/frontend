@@ -1,3 +1,21 @@
+export type PerformanceClassification = 'At Risk' | 'Average' | 'Good' | 'Excellent';
+
+export interface StudentPerformanceMetrics {
+  student_marks: number;
+  percentile: number;
+  normalized_score: number; // student_marks / subject_average
+  classification: PerformanceClassification;
+}
+
+export interface SubjectPerformanceConfig {
+  pass_threshold: number;
+  percentile_ranges: {
+    at_risk_max: 30;
+    average_max: 60;
+    good_max: 85;
+  };
+}
+
 export type RiskLevel = 'Critical' | 'High' | 'Moderate' | 'Low';
 
 export interface PaginationMeta {
@@ -294,6 +312,11 @@ export interface SubjectCatalogItem {
   semester?: number | null;
   records: number;
   is_active: boolean;
+  // Threshold configuration for performance analytics
+  pass_threshold?: number | null; // Minimum marks to pass (e.g., 40)
+  percentile_excellent?: number | null; // e.g., 85
+  percentile_good?: number | null;      // e.g., 60
+  percentile_average?: number | null;   // e.g., 30
 }
 
 export interface StudentSkillDomainScore {
