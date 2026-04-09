@@ -15,6 +15,7 @@ const AdminDashboard = lazy(() => import('./pages/AdminDashboard'));
 const StaffDashboard = lazy(() => import('./pages/StaffDashboard'));
 
 import ConsentScreen from './components/ConsentScreen';
+import GeminiChat from './components/GeminiChat.jsx';
 import { ROLES, getDefaultRouteForRole } from './routes/config';
 
 const queryClient = new QueryClient({
@@ -91,10 +92,13 @@ function App() {
                   }
                 />
                 
+                {/* GeminiChat is now global, not a route */}
                 <Route path="*" element={<Navigate to={isAuthenticated ? getRedirectPath() : '/login'} replace />} />
               </Routes>
             </Suspense>
 
+            {/* Floating Gemini Chat appears everywhere when authenticated */}
+            {isAuthenticated && <GeminiChat />}
           </div>
         </Router>
       </ErrorBoundary>

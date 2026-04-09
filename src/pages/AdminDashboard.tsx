@@ -378,6 +378,7 @@ function AdminPasswordChangeForm() {
   );
 }
 
+// Threshold Configuration Modal Component
 function ThresholdConfigModal({ 
   subject, 
   isOpen, 
@@ -387,43 +388,30 @@ function ThresholdConfigModal({
   subject: SubjectCatalogItem | null; 
   isOpen: boolean; 
   onClose: () => void; 
-  onSave: (subjectId: number, data: any) => void; 
+  onSave: (subjectId: number, threshold: number) => void; 
 }) {
   const [passThreshold, setPassThreshold] = useState<string>("");
-  const [percentileAverage, setPercentileAverage] = useState<string>("30");
-  const [percentileGood, setPercentileGood] = useState<string>("60");
-  const [percentileExcellent, setPercentileExcellent] = useState<string>("85");
   const [error, setError] = useState<string>("");
 
   useEffect(() => {
     if (subject && isOpen) {
-      setPassThreshold(subject.pass_threshold?.toString() || "50");
-      setPercentileAverage(subject.percentile_average?.toString() || "30");
-      setPercentileGood(subject.percentile_good?.toString() || "60");
-      setPercentileExcellent(subject.percentile_excellent?.toString() || "85");
+      setPassThreshold(subject.pass_threshold?.toString() || "40");
       setError("");
     }
   }, [subject, isOpen]);
 
   const handleSave = () => {
     const threshold = parseFloat(passThreshold);
-    const pAvg = parseFloat(percentileAverage);
-    const pGood = parseFloat(percentileGood);
-    const pExc = parseFloat(percentileExcellent);
     
-    // Validate hierarchy
-    if (pExc < pGood || pGood < pAvg || pAvg < 0 || pExc > 100) {
-      setError("Hierarchy must be: Excellent (max) >= Good >= Average >= 0");
+    // Validate threshold
+    const validation = validatePassThreshold(threshold);
+    if (!validation.isValid) {
+      setError(validation.error || "Invalid threshold");
       return;
     }
 
     if (subject) {
-      onSave(subject.id, {
-        pass_threshold: threshold,
-        percentile_average: pAvg,
-        percentile_good: pGood,
-        percentile_excellent: pExc
-      });
+      onSave(subject.id, threshold);
       onClose();
     }
   };
@@ -474,59 +462,14 @@ function ThresholdConfigModal({
             )}
           </div>
 
-          <div className="bg-muted/10 p-5 rounded-xl space-y-4 border border-border/40">
-            <p className="text-sm font-semibold text-foreground flex items-center gap-2">
-              <Zap size={16} className="text-primary" />
-              Performance Classification Rules
-            </p>
-            
-            <div className="grid grid-cols-1 gap-4">
-              <div className="space-y-1.5">
-                <div className="flex justify-between items-center text-xs">
-                  <span className="text-emerald-500 font-bold uppercase tracking-widest">Excellent</span>
-                  <span className="text-muted-foreground">Percentile &gt; {percentileExcellent}</span>
-                </div>
-                <input
-                  type="number"
-                  value={percentileExcellent}
-                  onChange={(e) => setPercentileExcellent(e.target.value)}
-                  className="input-field w-full !py-1.5 text-sm"
-                />
-              </div>
-
-              <div className="space-y-1.5">
-                <div className="flex justify-between items-center text-xs">
-                  <span className="text-blue-500 font-bold uppercase tracking-widest">Good</span>
-                  <span className="text-muted-foreground">Percentile {percentileGood}-{percentileExcellent}</span>
-                </div>
-                <input
-                  type="number"
-                  value={percentileGood}
-                  onChange={(e) => setPercentileGood(e.target.value)}
-                  className="input-field w-full !py-1.5 text-sm"
-                />
-              </div>
-
-              <div className="space-y-1.5">
-                <div className="flex justify-between items-center text-xs">
-                  <span className="text-yellow-500 font-bold uppercase tracking-widest">Average</span>
-                  <span className="text-muted-foreground">Percentile {percentileAverage}-{percentileGood}</span>
-                </div>
-                <input
-                  type="number"
-                  value={percentileAverage}
-                  onChange={(e) => setPercentileAverage(e.target.value)}
-                  className="input-field w-full !py-1.5 text-sm"
-                />
-              </div>
-
-              <div className="pt-2 border-t border-border/30">
-                <div className="flex justify-between items-center text-xs opacity-80">
-                  <span className="text-red-500 font-bold uppercase tracking-widest">At Risk</span>
-                  <span className="text-muted-foreground italic">Marks &lt; threshold OR percentile &lt; {percentileAverage}</span>
-                </div>
-              </div>
-            </div>
+          <div className="bg-muted/10 p-4 rounded-lg space-y-2">
+            <p className="text-sm font-medium text-foreground">Performance Classification Rules:</p>
+            <ul className="text-xs space-y-1 text-muted-foreground">
+              <li>• <span className="text-red-500">At Risk</span>: Marks &lt; threshold OR percentile &lt; 30</li>
+              <li>• <span className="text-yellow-500">Average</span>: Percentile 30-60</li>
+              <li>• <span className="text-blue-500">Good</span>: Percentile 60-85</li>
+              <li>• <span className="text-green-500">Excellent</span>: Percentile &gt; 85</li>
+            </ul>
           </div>
         </div>
 
@@ -644,12 +587,12 @@ function SubjectsManagementPanel({ studentBatchFilter, studentSectionFilter }: {
 
   // Update threshold mutation with optimistic updates
   const updateThresholdMutation = useMutation({
-    mutationFn: ({ subjectId, data }: { subjectId: number; data: any }) => {
-      console.log("🔄 Updating thresholds for subject ID:", subjectId, "with payload:", data);
-      return api.patch(`admin/subjects/${subjectId}/thresholds`, data);
+    mutationFn: ({ subjectId, threshold }: { subjectId: number; threshold: number }) => {
+      console.log("🔄 Updating threshold for subject ID:", subjectId, "to:", threshold);
+      return api.patch(`admin/subjects/${subjectId}/threshold`, { pass_threshold: threshold });
     },
-    onMutate: async ({ subjectId, data }) => {
-      console.log("🔄 onMutate - Optimistically updating thresholds for subject:", subjectId);
+    onMutate: async ({ subjectId, threshold }) => {
+      console.log("🔄 onMutate - Optimistically updating threshold for subject:", subjectId);
 
       // Cancel any outgoing refetches
       await queryClient.cancelQueries({ queryKey: ["admin-subject-catalog", studentBatchFilter, studentSectionFilter] });
@@ -664,7 +607,7 @@ function SubjectsManagementPanel({ studentBatchFilter, studentSectionFilter }: {
         if (!old) return old;
         return old.map((subject: any) =>
           subject.id === subjectId
-            ? { ...subject, ...data }
+            ? { ...subject, pass_threshold: threshold }
             : subject,
         );
       });
@@ -710,8 +653,8 @@ function SubjectsManagementPanel({ studentBatchFilter, studentSectionFilter }: {
     setThresholdModalOpen(true);
   };
 
-  const handleSaveThreshold = (subjectId: number, data: any) => {
-    updateThresholdMutation.mutate({ subjectId, data });
+  const handleSaveThreshold = (subjectId: number, threshold: number) => {
+    updateThresholdMutation.mutate({ subjectId, threshold });
   };
 
   const groupedSubjects = useMemo(() => {

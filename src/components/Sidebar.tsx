@@ -137,6 +137,9 @@ export default function Sidebar({ role = 'student', width, onResizeStart, isResi
                 <NavItem icon={ShieldAlert} label="Risk Radar" href="?tab=Risk" isActive={activeTab === 'Risk'} />
                 <NavItem icon={Target} label="Placement Pipeline" href="?tab=Placements" isActive={activeTab === 'Placements'} />
               </NavGroup>
+              <NavGroup title="AI">
+                <NavItem icon={Zap} label="Gemini AI Chat" href="/gemini-chat" isActive={window.location.pathname === '/gemini-chat'} />
+              </NavGroup>
 
               <NavGroup title="Analytics">
                 <NavItem icon={Zap} label="Subject Analytics" href="?tab=Performance" isActive={activeTab === 'Performance'} />
@@ -145,6 +148,9 @@ export default function Sidebar({ role = 'student', width, onResizeStart, isResi
                 <NavItem icon={Layers} label="Faculty Impact" href="#faculty-impact" />
                 <NavItem icon={BarChart2} label="Attendance Report" href="?tab=Attendance" isActive={activeTab === 'Attendance'} />
               </NavGroup>
+              <NavGroup title="AI">
+                <NavItem icon={Zap} label="Gemini AI Chat" href="/gemini-chat" isActive={window.location.pathname === '/gemini-chat'} />
+              </NavGroup>
 
               <NavGroup title="Management">
                 <NavItem icon={User} label="Profile Settings" href="?tab=Profile" isActive={activeTab === 'Profile'} />
@@ -152,6 +158,9 @@ export default function Sidebar({ role = 'student', width, onResizeStart, isResi
                 <NavItem icon={Users} label="Student Directory" href="?tab=Students" isActive={activeTab === 'Students'} />
                 <NavItem icon={Users} label="Staff Management" href="?tab=Staff" isActive={activeTab === 'Staff'} />
                 <NavItem icon={Layers} label="Subject Management" href="?tab=Subjects" isActive={activeTab === 'Subjects'} />
+              </NavGroup>
+              <NavGroup title="AI">
+                <NavItem icon={Zap} label="Gemini AI Chat" href="/gemini-chat" isActive={window.location.pathname === '/gemini-chat'} />
               </NavGroup>
             </>
           ) : role === 'staff' ? (
