@@ -21,7 +21,7 @@ export const useAuthStore = create(
        * @param {string} refreshToken 
        */
       setAuth: (user, token, refreshToken) => {
-        set({ user, token, refreshToken });
+        set({ user, token, refreshToken, lastActivity: Date.now() });
       },
 
       /**
