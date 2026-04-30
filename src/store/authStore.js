@@ -12,6 +12,7 @@ export const useAuthStore = create(
       token: null,
       refreshToken: null,
       hasConsented: false,
+      lastActivity: null, // Timestamp (ms) of the last successful API call
       
       /**
        * Set authentication details
@@ -43,8 +44,17 @@ export const useAuthStore = create(
           user: null, 
           token: null, 
           refreshToken: null,
+          lastActivity: null,
           // We don't reset hasConsented as it's per-device compliance
         });
+      },
+
+      /**
+       * Records the current timestamp as the last user activity.
+       * Called on every successful API response so we can detect inactivity.
+       */
+      updateLastActivity: () => {
+        set({ lastActivity: Date.now() });
       },
       
       /**

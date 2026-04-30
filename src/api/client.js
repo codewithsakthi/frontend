@@ -32,26 +32,45 @@ api.interceptors.request.use((config) => {
 });
 
 api.interceptors.response.use(
-  (response) => response.data,
+  (response) => {
+    // Track last activity time on every successful response
+    useAuthStore.getState().updateLastActivity();
+    return response.data;
+  },
   async (error) => {
     const originalRequest = error.config;
 
     // If error is 401 and we haven't tried refreshing yet
     if (error.response?.status === 401 && !originalRequest._retry) {
       originalRequest._retry = true;
-      const refreshToken = useAuthStore.getState().refreshToken;
+      const { refreshToken, lastActivity } = useAuthStore.getState();
+
+      // Check if the user has been inactive for more than 7 days.
+      // If so, log them out instead of attempting a silent refresh.
+      const SEVEN_DAYS_MS = 7 * 24 * 60 * 60 * 1000;
+      if (lastActivity && Date.now() - lastActivity > SEVEN_DAYS_MS) {
+        useAuthStore.getState().logout();
+        if (!window.location.pathname.includes('/login')) {
+          window.location.href = '/login';
+        }
+        return Promise.reject(new Error('Session expired due to inactivity'));
+      }
 
       if (refreshToken) {
         try {
           const response = await axios.post(`${API_BASE}/api/v1/auth/refresh`, {
             refresh_token: refreshToken
           });
-          const { access_token } = response.data;
+          // IMPORTANT: Save BOTH the new access token AND the new refresh token.
+          // The backend rotates the refresh token on every use (revokes old, issues new).
+          // If we discard the new refresh token here, the next silent refresh will
+          // fail with "Refresh token expired or revoked" → immediate logout.
+          const { access_token, refresh_token: newRefreshToken } = response.data;
 
           useAuthStore.getState().setAuth(
             useAuthStore.getState().user,
             access_token,
-            refreshToken
+            newRefreshToken || refreshToken  // prefer new rotated token
           );
 
           originalRequest.headers.Authorization = `Bearer ${access_token}`;
