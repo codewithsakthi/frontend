@@ -1146,7 +1146,7 @@ export default function AdminDashboard() {
   const [studentRiskOnly, setStudentRiskOnly] = useState(false);
 
   const [studentSortBy, setStudentSortBy] = useState<
-    "rank" | "name" | "roll_no"
+    "rank" | "name" | "roll_no" | "reg_no" | "gpa" | "attendance" | "backlogs"
   >("rank");
 
   const [studentSortDir, setStudentSortDir] = useState<"asc" | "desc">("asc");
@@ -1718,7 +1718,7 @@ export default function AdminDashboard() {
     return data.batch_health.map((b: any) => b.batch);
   }, [data?.batch_health]);
 
-  const toggleSort = (field: "rank" | "name" | "roll_no") => {
+  const toggleSort = (field: "rank" | "name" | "roll_no" | "reg_no" | "gpa" | "attendance" | "backlogs") => {
     if (studentSortBy === field) {
       setStudentSortDir(studentSortDir === "asc" ? "desc" : "asc");
     } else {
@@ -2356,6 +2356,8 @@ export default function AdminDashboard() {
 
                       { key: "roll_no", label: "Roll No" },
 
+                      { key: "reg_no", label: "Reg No" },
+
                       { key: "batch", label: "Batch" },
 
                       { key: "section", label: "Sec" },
@@ -2371,10 +2373,10 @@ export default function AdminDashboard() {
                       <th key={col.key} className="px-4 py-3 text-left">
                         <button
                           onClick={() =>
-                            ["rank", "name", "roll_no", "gpa", "attendance", "backlogs"].includes(col.key) &&
+                            ["rank", "name", "roll_no", "reg_no", "gpa", "attendance", "backlogs"].includes(col.key) &&
                             toggleSort(col.key as any)
                           }
-                          className={`flex items-center gap-1 text-[10px] font-black uppercase tracking-widest ${["rank", "name", "roll_no", "gpa", "attendance", "backlogs"].includes(col.key) ? "hover:text-primary transition-colors" : "text-muted-foreground"}`}
+                          className={`flex items-center gap-1 text-[10px] font-black uppercase tracking-widest ${["rank", "name", "roll_no", "reg_no", "gpa", "attendance", "backlogs"].includes(col.key) ? "hover:text-primary transition-colors" : "text-muted-foreground"}`}
                         >
                           {col.label}
 
@@ -2422,14 +2424,12 @@ export default function AdminDashboard() {
                             </button>
                           </td>
 
-                          <td className="px-4 py-4 text-muted-foreground">
-                            <div>{item.roll_no}</div>
+                          <td className="px-4 py-4 font-mono text-muted-foreground">
+                            {item.roll_no}
+                          </td>
 
-                            {item.reg_no && (
-                              <div className="text-[10px] opacity-70">
-                                Reg: {item.reg_no}
-                              </div>
-                            )}
+                          <td className="px-4 py-4 font-mono text-muted-foreground">
+                            {item.reg_no || <span className="opacity-40">—</span>}
                           </td>
 
                           <td className="px-4 py-4">
