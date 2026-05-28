@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
-import { Search, Bell, User, ChevronRight, LogOut, ShieldCheck } from 'lucide-react';
+import { Search, Bell, User, ChevronRight, LogOut, ShieldCheck, Menu } from 'lucide-react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import Sidebar from './Sidebar';
 import ThemeToggle from './ThemeToggle';
@@ -22,12 +22,18 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
   const [width, setWidth] = useState(DEFAULT_WIDTH);
   const [isResizing, setIsResizing] = useState(false);
   const [userMenuOpen, setUserMenuOpen] = useState(false);
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const userMenuRef = useRef<HTMLDivElement>(null);
   const { theme, toggleTheme } = useThemeStore();
   const { user, logout } = useAuthStore();
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
   const activeTab = searchParams.get('tab') || 'Overview';
+
+  // Automatically close mobile menu drawer upon tab/query changes
+  useEffect(() => {
+    setIsMobileMenuOpen(false);
+  }, [searchParams]);
   const userRole = (user as any)?.role?.name || (user as any)?.role || 'student';
   const role = 
     userRole === 'admin' 
@@ -102,12 +108,39 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
         />
       </div>
 
+      {/* Mobile Sidebar Drawer Overlay */}
+      {isMobileMenuOpen && (
+        <div className="fixed inset-0 z-50 lg:hidden flex">
+          {/* Backdrop Overlay */}
+          <div 
+            className="fixed inset-0 bg-background/80 backdrop-blur-sm transition-opacity duration-300"
+            onClick={() => setIsMobileMenuOpen(false)}
+          />
+          {/* Sliding Panel */}
+          <div className="relative flex w-[260px] h-full flex-col bg-card animate-in slide-in-from-left duration-300 shadow-2xl border-r border-border/50">
+            <Sidebar 
+              role={role}
+              width={260} 
+              onResizeStart={() => {}} 
+              isResizing={false} 
+            />
+          </div>
+        </div>
+      )}
+
       {/* Main Content Area */}
       <div className="flex flex-1 flex-col min-w-0 h-screen overflow-hidden">
         {/* Top Header Shell */}
         <header className="sticky top-0 z-30 flex h-14 w-full flex-shrink-0 items-center justify-between border-b border-border/40 bg-background/80 px-4 backdrop-blur-xl md:h-16 md:px-6">
-          {/* Left: Brand on mobile, Breadcrumb on desktop */}
-          <div className="flex items-center gap-2 min-w-0">
+          {/* Left: Brand & Mobile Toggle on mobile, Breadcrumb on desktop */}
+          <div className="flex items-center gap-3 min-w-0">
+            <button
+              onClick={() => setIsMobileMenuOpen(true)}
+              className="p-1.5 rounded-xl hover:bg-muted text-muted-foreground hover:text-foreground lg:hidden flex items-center justify-center transition-colors"
+              aria-label="Open navigation menu"
+            >
+              <Menu size={20} />
+            </button>
             <span className="text-sm font-extrabold tracking-tight text-foreground md:hidden">SPARK</span>
             <div className="hidden md:flex items-center gap-2 text-sm text-muted-foreground">
               <span className="font-medium hover:text-foreground cursor-pointer" onClick={() => navigate('/dashboard')}>Dashboard</span>

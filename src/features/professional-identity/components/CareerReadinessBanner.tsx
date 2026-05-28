@@ -60,7 +60,7 @@ export const CareerReadinessBanner: React.FC<CareerReadinessBannerProps> = ({ re
             </span>
           </div>
           
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-x-6 gap-y-1 text-xs text-muted-foreground font-semibold uppercase tracking-wider mt-2.5">
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-x-6 gap-y-1 text-xs text-muted-foreground font-semibold uppercase tracking-wider mt-2.5">
             <span>💻 Projects: {readiness.total_projects} ({readiness.verified_projects} Verified)</span>
             <span>⭐ Skills: {readiness.total_skills} ({readiness.verified_skills} Rated)</span>
             <span>📜 Certifications: {readiness.total_certifications}</span>

@@ -468,11 +468,11 @@ export default function ProfessionalProfilePage() {
               <p className="text-2xl font-black text-foreground">{completion}%</p>
             </div>
           </div>
-          <div className="flex gap-2">
+          <div className="flex flex-col sm:flex-row w-full sm:w-auto gap-2">
             {!editing && (
               <button
                 onClick={() => setEditing(true)}
-                className="px-4 py-2.5 rounded-xl bg-primary text-primary-foreground font-black text-xs uppercase tracking-widest hover:scale-105 transition-all shadow-lg shadow-primary/20"
+                className="w-full sm:w-auto px-4 py-2.5 rounded-xl bg-primary text-primary-foreground font-black text-xs uppercase tracking-widest hover:scale-105 transition-all shadow-lg shadow-primary/20 text-center justify-center flex items-center"
               >
                 ✏️ {profile ? 'Edit Profile' : 'Create Profile'}
               </button>
@@ -480,7 +480,7 @@ export default function ProfessionalProfilePage() {
             {insights?.ai_status !== 'processing' && (
               <button
                 onClick={() => triggerAI.mutate()}
-                className="px-4 py-2.5 rounded-xl border border-border bg-card hover:bg-muted font-bold text-xs uppercase tracking-widest transition-all"
+                className="w-full sm:w-auto px-4 py-2.5 rounded-xl border border-border bg-card hover:bg-muted font-bold text-xs uppercase tracking-widest transition-all text-center justify-center flex items-center"
               >
                 🤖 Refine Career DNA
               </button>
@@ -1031,7 +1031,7 @@ export default function ProfessionalProfilePage() {
                 {githubData.top_repos && (
                   <div className="space-y-3">
                     <p className="text-xs font-black uppercase tracking-wider text-muted-foreground">Top Repositories</p>
-                    <div className="grid grid-cols-2 gap-3">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                       {githubData.top_repos.slice(0, 4).map((repo: any) => (
                         <a
                           key={repo.name}
@@ -1066,18 +1066,18 @@ export default function ProfessionalProfilePage() {
                 </h3>
                 <p className="text-xs text-muted-foreground mb-6">Coding test scores and algorithm resolution stats.</p>
 
-                <div className="grid grid-cols-3 gap-4 mb-6">
-                  <div className="p-4 rounded-2xl bg-[#ffa116]/5 border border-[#ffa116]/10 text-center">
+                <div className="grid grid-cols-3 gap-1.5 sm:gap-4 mb-6">
+                  <div className="p-2 sm:p-4 rounded-2xl bg-[#ffa116]/5 border border-[#ffa116]/10 text-center">
                     <p className="text-[10px] font-black uppercase tracking-wider text-muted-foreground">Ranking</p>
-                    <p className="text-lg font-black text-[#ffa116] mt-2">#{leetcodeData.ranking?.toLocaleString()}</p>
+                    <p className="text-xs sm:text-lg font-black text-[#ffa116] mt-2">#{leetcodeData.ranking?.toLocaleString()}</p>
                   </div>
-                  <div className="p-4 rounded-2xl bg-primary/5 border border-primary/10 text-center">
+                  <div className="p-2 sm:p-4 rounded-2xl bg-primary/5 border border-primary/10 text-center">
                     <p className="text-[10px] font-black uppercase tracking-wider text-muted-foreground">Acceptance</p>
-                    <p className="text-lg font-black text-primary mt-2">{leetcodeData.acceptance_rate}%</p>
+                    <p className="text-xs sm:text-lg font-black text-primary mt-2">{leetcodeData.acceptance_rate}%</p>
                   </div>
-                  <div className="p-4 rounded-2xl bg-emerald-500/5 border border-emerald-500/10 text-center">
+                  <div className="p-2 sm:p-4 rounded-2xl bg-emerald-500/5 border border-emerald-500/10 text-center">
                     <p className="text-[10px] font-black uppercase tracking-wider text-muted-foreground">Points</p>
-                    <p className="text-lg font-black text-emerald-500 mt-2">{leetcodeData.contribution_points}</p>
+                    <p className="text-xs sm:text-lg font-black text-emerald-500 mt-2">{leetcodeData.contribution_points}</p>
                   </div>
                 </div>
 

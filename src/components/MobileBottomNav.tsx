@@ -13,8 +13,8 @@ import { useLocation, useNavigate } from 'react-router-dom';
 
 const ADMIN_ITEMS = [
   { label: 'Home',     icon: LayoutDashboard, sectionId: 'command-center',     tab: 'Overview' },
+  { label: 'ASIE',     icon: Target,          sectionId: '',                    tab: 'ASIE' },
   { label: 'Risk',     icon: ShieldAlert,     sectionId: '',                    tab: 'Risk' },
-  { label: 'Leaders',  icon: Trophy,          sectionId: '',                    tab: 'Leaderboard' },
   { label: 'Pipeline', icon: Target,          sectionId: '',                    tab: 'Placements' },
   { label: 'Students', icon: Users,           sectionId: '',                    tab: 'Students' },
 ];
@@ -23,8 +23,8 @@ const STUDENT_ITEMS = [
   { label: 'Overview',   icon: LayoutDashboard, route: '/dashboard', tab: 'Overview' },
   { label: 'Attendance', icon: Calendar,        route: '/dashboard', tab: 'Attendance' },
   { label: 'Analytics',  icon: BarChart2,       route: '/dashboard', tab: 'Performance' },
+  { label: 'Professional', icon: Trophy,        route: '/dashboard', tab: 'Professional' },
   { label: 'Profile',    icon: Activity,        route: '/dashboard', tab: 'Profile' },
-  { label: 'Security',   icon: ShieldAlert,     route: '/dashboard', tab: 'Security' },
 ];
 
 const STAFF_ITEMS = [

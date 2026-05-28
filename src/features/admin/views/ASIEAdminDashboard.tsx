@@ -299,18 +299,18 @@ export default function ASIEAdminDashboard({ onOpenStudentProfile }: ASIEAdminDa
         </div>
 
         {/* Quick Cohort Analytics Panel */}
-        <div className="flex gap-4 self-start md:self-auto">
-          <div className="glass border border-border/40 rounded-2xl px-4 py-3 min-w-[100px] text-center">
+        <div className="flex flex-wrap gap-2 sm:gap-4 self-stretch md:self-auto justify-between md:justify-start">
+          <div className="glass border border-border/40 rounded-2xl px-4 py-3 flex-1 min-w-[85px] sm:min-w-[100px] text-center">
             <p className="text-[10px] font-black uppercase tracking-wider text-muted-foreground">Students Plotted</p>
             <p className="text-2xl font-black text-primary mt-1">{totalStudents}</p>
           </div>
-          <div className="glass border border-border/40 rounded-2xl px-4 py-3 min-w-[100px] text-center">
+          <div className="glass border border-border/40 rounded-2xl px-4 py-3 flex-1 min-w-[85px] sm:min-w-[100px] text-center">
             <p className="text-[10px] font-black uppercase tracking-wider text-muted-foreground">High SPI (Stars)</p>
             <p className="text-2xl font-black text-emerald-500 mt-1">
               {(quadrantCounts["Star Performer"] || 0) + (quadrantCounts["High Potential Leader"] || 0)}
             </p>
           </div>
-          <div className="glass border border-border/40 rounded-2xl px-4 py-3 min-w-[100px] text-center">
+          <div className="glass border border-border/40 rounded-2xl px-4 py-3 flex-1 min-w-[85px] sm:min-w-[100px] text-center">
             <p className="text-[10px] font-black uppercase tracking-wider text-muted-foreground">Under Mentorship</p>
             <p className="text-2xl font-black text-rose-500 mt-1">
               {quadrantCounts["Needs Developmental Support"] || 0}
@@ -320,10 +320,10 @@ export default function ASIEAdminDashboard({ onOpenStudentProfile }: ASIEAdminDa
       </div>
 
       {/* Navigation Sub-Tabs */}
-      <div className="flex flex-wrap gap-2 p-1.5 bg-card/40 backdrop-blur-xl border border-border/50 rounded-2xl w-fit">
+      <div className="flex w-full overflow-x-auto no-scrollbar scroll-smooth gap-2 p-1.5 bg-card/40 backdrop-blur-xl border border-border/50 rounded-2xl md:w-fit">
         <button
           onClick={() => { setActiveSubTab("matrix"); setSelectedQuadrant(null); }}
-          className={`flex items-center gap-2 rounded-xl px-4 py-2.5 text-xs font-bold uppercase tracking-wider transition-all duration-200 ${
+          className={`flex shrink-0 items-center gap-2 rounded-xl px-4 py-2.5 text-xs font-bold uppercase tracking-wider transition-all duration-200 ${
             activeSubTab === "matrix"
               ? "bg-primary text-primary-foreground shadow-lg shadow-primary/20"
               : "text-muted-foreground hover:bg-muted hover:text-foreground"
@@ -334,7 +334,7 @@ export default function ASIEAdminDashboard({ onOpenStudentProfile }: ASIEAdminDa
         </button>
         <button
           onClick={() => setActiveSubTab("hidden")}
-          className={`flex items-center gap-2 rounded-xl px-4 py-2.5 text-xs font-bold uppercase tracking-wider transition-all duration-200 ${
+          className={`flex shrink-0 items-center gap-2 rounded-xl px-4 py-2.5 text-xs font-bold uppercase tracking-wider transition-all duration-200 ${
             activeSubTab === "hidden"
               ? "bg-primary text-primary-foreground shadow-lg shadow-primary/20"
               : "text-muted-foreground hover:bg-muted hover:text-foreground"
@@ -345,7 +345,7 @@ export default function ASIEAdminDashboard({ onOpenStudentProfile }: ASIEAdminDa
         </button>
         <button
           onClick={() => setActiveSubTab("high-potential")}
-          className={`flex items-center gap-2 rounded-xl px-4 py-2.5 text-xs font-bold uppercase tracking-wider transition-all duration-200 ${
+          className={`flex shrink-0 items-center gap-2 rounded-xl px-4 py-2.5 text-xs font-bold uppercase tracking-wider transition-all duration-200 ${
             activeSubTab === "high-potential"
               ? "bg-primary text-primary-foreground shadow-lg shadow-primary/20"
               : "text-muted-foreground hover:bg-muted hover:text-foreground"
@@ -356,7 +356,7 @@ export default function ASIEAdminDashboard({ onOpenStudentProfile }: ASIEAdminDa
         </button>
         <button
           onClick={() => setActiveSubTab("intervention")}
-          className={`flex items-center gap-2 rounded-xl px-4 py-2.5 text-xs font-bold uppercase tracking-wider transition-all duration-200 ${
+          className={`flex shrink-0 items-center gap-2 rounded-xl px-4 py-2.5 text-xs font-bold uppercase tracking-wider transition-all duration-200 ${
             activeSubTab === "intervention"
               ? "bg-primary text-primary-foreground shadow-lg shadow-primary/20"
               : "text-muted-foreground hover:bg-muted hover:text-foreground"
@@ -367,7 +367,7 @@ export default function ASIEAdminDashboard({ onOpenStudentProfile }: ASIEAdminDa
         </button>
         <button
           onClick={() => setActiveSubTab("careers")}
-          className={`flex items-center gap-2 rounded-xl px-4 py-2.5 text-xs font-bold uppercase tracking-wider transition-all duration-200 ${
+          className={`flex shrink-0 items-center gap-2 rounded-xl px-4 py-2.5 text-xs font-bold uppercase tracking-wider transition-all duration-200 ${
             activeSubTab === "careers"
               ? "bg-primary text-primary-foreground shadow-lg shadow-primary/20"
               : "text-muted-foreground hover:bg-muted hover:text-foreground"
@@ -403,9 +403,9 @@ export default function ASIEAdminDashboard({ onOpenStudentProfile }: ASIEAdminDa
         <>
           {/* TAB 1: 9-BOX TALENT MATRIX */}
           {activeSubTab === "matrix" && (
-            <div className="grid grid-cols-1 xl:grid-cols-12 gap-6">
+            <div className="flex flex-col xl:grid xl:grid-cols-12 gap-6">
               {/* The 9-Box Grid Layout */}
-              <div className="xl:col-span-8 space-y-6">
+              <div className="col-span-1 xl:col-span-8 space-y-6 min-w-0 w-full">
                 <article className="panel relative overflow-hidden">
                   <div className="mb-6">
                     <h3 className="text-lg font-bold text-foreground">Institutional 9-Box Talent Matrix</h3>
@@ -421,8 +421,10 @@ export default function ASIEAdminDashboard({ onOpenStudentProfile }: ASIEAdminDa
                       <span>Potential (SPI Score)</span>
                     </div>
                     
-                    {/* The 3x3 Grid */}
-                    <div className="grid grid-cols-3 gap-3 ml-2">
+                    {/* Responsive Horizontally Scrollable Wrapper */}
+                    <div className="w-full overflow-x-auto scrollbar-thin pb-2 ml-2">
+                      {/* The 3x3 Grid */}
+                      <div className="grid grid-cols-3 gap-3 min-w-[650px] md:min-w-0">
                       {/* Row 1: High Potential (Y-axis: High) */}
                       {/* Cell Top-Left: Hidden Talent (High Potential, Low Academics) */}
                       {(() => {
@@ -661,6 +663,7 @@ export default function ASIEAdminDashboard({ onOpenStudentProfile }: ASIEAdminDa
                       })()}
 
                     </div>
+                    </div>
 
                     {/* X-Axis Label */}
                     <div className="text-center mt-6 text-[10px] font-black uppercase tracking-[0.25em] text-muted-foreground/50">
@@ -671,7 +674,7 @@ export default function ASIEAdminDashboard({ onOpenStudentProfile }: ASIEAdminDa
               </div>
 
               {/* Dynamic Cohort Panel (Right Side) */}
-              <div className="xl:col-span-4 space-y-6">
+              <div className="col-span-1 xl:col-span-4 space-y-6 min-w-0 w-full">
                 <article className="panel flex flex-col h-full justify-between">
                   <div>
                     <div className="flex items-center gap-2 mb-4">
@@ -736,11 +739,11 @@ export default function ASIEAdminDashboard({ onOpenStudentProfile }: ASIEAdminDa
                     </div>
 
                     <div className="flex flex-wrap gap-2">
-                      <div className="relative">
+                      <div className="relative w-full sm:w-auto">
                         <input
                           value={matrixSearch}
                           onChange={(e) => setMatrixSearch(e.target.value)}
-                          className="input-field !py-2 !w-60 pl-10 text-xs"
+                          className="input-field !py-2 w-full sm:w-60 pl-10 text-xs"
                           placeholder="Search student or roll no..."
                         />
                         <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" size={14} />
@@ -903,7 +906,7 @@ export default function ASIEAdminDashboard({ onOpenStudentProfile }: ASIEAdminDa
                                   {item.roll_no}
                                 </p>
                               </button>
-                              <p className="text-[11px] text-primary italic max-w-sm mt-1 bg-primary/5 p-2 rounded-lg border border-primary/10">
+                              <p className="text-[11px] text-primary italic max-w-[220px] sm:max-w-sm mt-1 bg-primary/5 p-2 rounded-lg border border-primary/10">
                                 {item.highlight_reason}
                               </p>
                             </td>
@@ -1136,7 +1139,7 @@ export default function ASIEAdminDashboard({ onOpenStudentProfile }: ASIEAdminDa
                                 </span>
                               </td>
                               <td className="px-4 py-4">
-                                <p className="text-xs text-muted-foreground leading-relaxed bg-muted/30 p-2 rounded-lg border border-border max-w-sm">
+                                <p className="text-xs text-muted-foreground leading-relaxed bg-muted/30 p-2 rounded-lg border border-border max-w-[220px] sm:max-w-sm">
                                   {item.suggested_action}
                                 </p>
                               </td>
@@ -1171,7 +1174,7 @@ export default function ASIEAdminDashboard({ onOpenStudentProfile }: ASIEAdminDa
           {activeSubTab === "careers" && (
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
               {/* Bar Chart Visualization */}
-              <article className="panel space-y-4">
+              <article className="panel space-y-4 min-w-0 w-full overflow-hidden">
                 <div>
                   <h3 className="text-lg font-bold text-foreground">Aggregate Career Suitability Distributions</h3>
                   <p className="text-xs text-muted-foreground mt-0.5">
@@ -1226,7 +1229,7 @@ export default function ASIEAdminDashboard({ onOpenStudentProfile }: ASIEAdminDa
               </article>
 
               {/* Pie Chart / Grid representation */}
-              <article className="panel space-y-4">
+              <article className="panel space-y-4 min-w-0 w-full overflow-hidden">
                 <div>
                   <h3 className="text-lg font-bold text-foreground">Target Role Segments</h3>
                   <p className="text-xs text-muted-foreground mt-0.5">
