@@ -2,14 +2,14 @@ import React, { useState } from 'react';
 import {
   Github, Award, Globe, Terminal, ShieldCheck,
   Sparkles, RefreshCw, Layers, Plus, ExternalLink, HelpCircle, Check, Loader2,
-  FileText, Trash2, Calendar, PlusCircle, PencilLine
+  FileText, Trash2, Calendar, PlusCircle, PencilLine, Linkedin, User, Camera
 } from 'lucide-react';
 import { useAuthStore } from '../../../store/authStore';
 import api from '../../../api/client';
 import {
   useProfile, useUpsertProfile, useCareerReadiness, useAIInsights, useTriggerAI,
   useGitHubAnalysis, useImportGitHubProjects, useLeetCodeAnalysis, useConnectLeetCode,
-  useGitHubCallback, useUploadResume, useProjects, useCreateProject, useDeleteProject,
+  useGitHubCallback, useLinkedInCallback, useUploadResume, useProjects, useCreateProject, useDeleteProject,
   useCertifications, useCreateCertification, useUpdateCertification, useDeleteCertification
 } from '../hooks';
 import { SkillMatrixChart } from '../components/SkillMatrixChart';
@@ -60,9 +60,12 @@ export default function ProfessionalProfilePage() {
   const { data: leetcodeData, isLoading: isLeetcodeLoading, refetch: refetchLeetcode } = useLeetCodeAnalysis(studentId!);
   const connectLeetCode = useConnectLeetCode(studentId!);
   const githubCallback = useGitHubCallback(studentId!);
+  const linkedinCallback = useLinkedInCallback(studentId!);
   const [isOAuthProcessing, setIsOAuthProcessing] = useState(false);
   const githubClientId = (import.meta as any).env.VITE_GITHUB_CLIENT_ID as string | undefined;
   const hasGithubOAuth = Boolean(githubClientId);
+  const linkedinClientId = (import.meta as any).env.VITE_LINKEDIN_CLIENT_ID as string | undefined;
+  const hasLinkedInOAuth = Boolean(linkedinClientId);
 
   const [editing, setEditing] = useState(false);
   const [form, setForm] = useState<ProfileCreateRequest>({});
@@ -73,6 +76,7 @@ export default function ProfessionalProfilePage() {
   React.useEffect(() => {
     const searchParams = new URLSearchParams(window.location.search);
     const code = searchParams.get('code');
+    const linkedinCode = searchParams.get('linkedin_code');
     if (code) {
       setIsOAuthProcessing(true);
       setSyncStatus('Exchanging OAuth code with GitHub...');
@@ -99,6 +103,30 @@ export default function ProfessionalProfilePage() {
             setSyncStatus(null);
           }, 4000);
         });
+    } else if (linkedinCode) {
+      setIsOAuthProcessing(true);
+      setSyncStatus('Connecting LinkedIn...');
+
+      const cleanUrl = window.location.pathname + '?tab=Professional';
+      window.history.replaceState({}, document.title, cleanUrl);
+
+      linkedinCallback.mutateAsync(linkedinCode)
+        .then((res) => {
+          setSyncStatus(res.message);
+          setTimeout(() => {
+            setIsOAuthProcessing(false);
+            setSyncStatus(null);
+            refetchProfile();
+            refetchReadiness();
+          }, 3000);
+        })
+        .catch((err) => {
+          setSyncStatus(`LinkedIn Error: ${err.message || 'Authentication failed'}`);
+          setTimeout(() => {
+            setIsOAuthProcessing(false);
+            setSyncStatus(null);
+          }, 4000);
+        });
     }
   }, []);
 
@@ -113,12 +141,118 @@ export default function ProfessionalProfilePage() {
 
   // Modals state
   const [showGithubModal, setShowGithubModal] = useState(false);
+  const [showLinkedinModal, setShowLinkedinModal] = useState(false);
   const [showLeetcodeModal, setShowLeetcodeModal] = useState(false);
   const [githubInput, setGithubInput] = useState('');
+  const [linkedinInput, setLinkedinInput] = useState('');
   const [leetcodeInput, setLeetcodeInput] = useState('');
 
   // Status logs for connectors
   const [syncStatus, setSyncStatus] = useState<string | null>(null);
+  const [linkedinImgError, setLinkedinImgError] = useState(false);
+  const [liPicUrl, setLiPicUrl] = useState<string | null>(null);
+
+  React.useEffect(() => {
+    setLinkedinImgError(false);
+    setLiPicUrl(null);
+  }, [profile?.picture_url]);
+
+  const [pictureError, setPictureError] = useState(false);
+  const [pictureTimestamp, setPictureTimestamp] = useState(Date.now());
+  const fileInputRef = React.useRef<HTMLInputElement | null>(null);
+  const [pictureUploading, setPictureUploading] = useState(false);
+  const baseUrl = (api as any).defaults.baseURL as string;
+  const profilePictureUrl = (studentId && (profile?.picture_url || profile?.github_username))
+    ? `${baseUrl}/professional/profile/${studentId}/picture?t=${pictureTimestamp}`
+    : '';
+
+  React.useEffect(() => {
+    setPictureError(false);
+    setPictureTimestamp(Date.now());
+  }, [profile?.picture_url, profile?.student_id, profile?.github_username]);
+
+  const handlePictureUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (file.size > 5 * 1024 * 1024) {
+      alert("Image size exceeds 5MB limit.");
+      return;
+    }
+
+    setPictureUploading(true);
+    setUploadStatus('Uploading profile picture...');
+    try {
+      const formData = new FormData();
+      formData.append('file', file);
+
+      const baseUrl = (api as any).defaults.baseURL as string;
+      const resp = await fetch(`${baseUrl}/professional/profile/upload-picture`, {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+        body: formData,
+      });
+
+      if (!resp.ok) {
+        const msg = await resp.text();
+        throw new Error(msg || `Failed to upload picture (${resp.status})`);
+      }
+
+      setPictureError(false);
+      setPictureTimestamp(Date.now());
+      refetchProfile();
+      setUploadStatus('Profile picture updated successfully!');
+      setTimeout(() => setUploadStatus(null), 3000);
+    } catch (err: any) {
+      alert(`Upload failed: ${err.message || 'Error'}`);
+      setUploadStatus(null);
+    } finally {
+      setPictureUploading(false);
+    }
+  };
+
+  const handleUseGithubPhoto = async () => {
+    if (!profile?.github_username) {
+      alert("Please connect your GitHub account first.");
+      return;
+    }
+    setUploadStatus('Syncing GitHub profile picture...');
+    try {
+      const githubUrl = `https://github.com/${profile.github_username}.png`;
+      await upsert.mutateAsync({
+        ...form,
+        github_username: profile.github_username,
+        picture_url: githubUrl
+      });
+      setPictureError(false);
+      setPictureTimestamp(Date.now());
+      refetchProfile();
+      setUploadStatus('Profile picture updated to GitHub photo!');
+      setTimeout(() => setUploadStatus(null), 3000);
+    } catch (err: any) {
+      alert(`Failed to set GitHub photo: ${err.message}`);
+      setUploadStatus(null);
+    }
+  };
+
+  React.useEffect(() => {
+    if (profile?.linkedin_cache_data && token) {
+      const baseUrl = (api as any).defaults.baseURL as string;
+      fetch(`${baseUrl}/professional/profile/linkedin-picture`, {
+        headers: { Authorization: `Bearer ${token}` },
+      })
+        .then(r => {
+          if (!r.ok) throw new Error("Failed to fetch LinkedIn picture");
+          return r.blob();
+        })
+        .then(blob => setLiPicUrl(URL.createObjectURL(blob)))
+        .catch(() => setLiPicUrl(null));
+    } else {
+      setLiPicUrl(null);
+    }
+  }, [profile?.linkedin_cache_data, token]);
 
   // Resume Upload State & Mutation
   const uploadResumeMutation = useUploadResume(studentId!);
@@ -332,6 +466,7 @@ export default function ProfessionalProfilePage() {
         github_username: profile.github_username,
         portfolio_url: profile.portfolio_url,
         linkedin_url: profile.linkedin_url,
+        picture_url: profile.picture_url,
         leetcode_username: profile.leetcode_username,
         hackerrank_username: profile.hackerrank_username,
         codechef_username: profile.codechef_username,
@@ -353,7 +488,11 @@ export default function ProfessionalProfilePage() {
     if (!githubInput.trim()) return;
     setSyncStatus('Connecting GitHub account...');
     try {
-      await upsert.mutateAsync({ ...form, github_username: githubInput.trim() });
+      // Set picture_url to GitHub avatar if we don't have one
+      const githubUrl = `https://github.com/${githubInput.trim()}.png`;
+      const pictureUrl = form.picture_url || profile?.picture_url || githubUrl;
+
+      await upsert.mutateAsync({ ...form, github_username: githubInput.trim(), picture_url: pictureUrl });
       await refetchGithub();
       setSyncStatus('GitHub Connected! Automatically importing public repositories as projects...');
       const res = await importGithub.mutateAsync();
@@ -369,10 +508,78 @@ export default function ProfessionalProfilePage() {
     }
   };
 
+  const handleConnectLinkedIn = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!linkedinInput.trim()) return;
+    setSyncStatus('Connecting LinkedIn profile...');
+    try {
+      // Robust parsed & normalized LinkedIn URL
+      const clean = linkedinInput.trim();
+      let normalizedUrl = '';
+      const match = clean.match(/(?:https?:\/\/)?(?:www\.)?linkedin\.com\/in\/([a-zA-Z0-9\-_%]+)/i);
+      if (match && match[1]) {
+        normalizedUrl = `https://www.linkedin.com/in/${match[1]}/`;
+      } else {
+        normalizedUrl = `https://www.linkedin.com/in/${clean.replace(/^\/+|\/+$/g, '')}/`;
+      }
+
+      // Infer social avatar from connected GitHub as fallback if no picture exists
+      let pictureUrl = form.picture_url || profile?.picture_url;
+      if (!pictureUrl && (form.github_username || profile?.github_username)) {
+        pictureUrl = `https://github.com/${form.github_username || profile?.github_username}.png`;
+      }
+
+      await upsert.mutateAsync({ 
+        ...form, 
+        linkedin_url: normalizedUrl, 
+        picture_url: pictureUrl || undefined 
+      });
+      setSyncStatus('LinkedIn connected successfully!');
+      setTimeout(() => {
+        setSyncStatus(null);
+        setShowLinkedinModal(false);
+        setLinkedinInput('');
+        refetchProfile();
+        refetchReadiness();
+      }, 1500);
+    } catch (err: any) {
+      setSyncStatus(`Error: ${err.message || 'Failed to connect LinkedIn'}`);
+      setTimeout(() => setSyncStatus(null), 3000);
+    }
+  };
+
+  const handleDisconnectLinkedIn = async () => {
+    if (!confirm('Are you sure you want to disconnect your LinkedIn profile?')) return;
+    setSyncStatus('Disconnecting LinkedIn profile...');
+    try {
+      await upsert.mutateAsync({ 
+        ...form, 
+        linkedin_url: '', 
+        picture_url: '' 
+      });
+      setSyncStatus('LinkedIn disconnected successfully!');
+      setTimeout(() => {
+        setSyncStatus(null);
+        refetchProfile();
+        refetchReadiness();
+      }, 1500);
+    } catch (err: any) {
+      setSyncStatus(`Error: ${err.message || 'Failed to disconnect LinkedIn'}`);
+      setTimeout(() => setSyncStatus(null), 3000);
+    }
+  };
+
   const handleGithubOAuthRedirect = () => {
     if (!githubClientId) return;
     const redirectUri = `${window.location.origin}/auth/github/callback`;
     window.location.href = `https://github.com/login/oauth/authorize?client_id=${githubClientId}&scope=read:user,repo&redirect_uri=${encodeURIComponent(redirectUri)}`;
+  };
+
+  const handleLinkedInOAuthRedirect = () => {
+    if (!linkedinClientId) return;
+    const redirectUri = `${window.location.origin}/auth/linkedin/callback`;
+    const scopes = 'openid profile email';
+    window.location.href = `https://www.linkedin.com/oauth/v2/authorization?response_type=code&client_id=${linkedinClientId}&scope=${encodeURIComponent(scopes)}&redirect_uri=${encodeURIComponent(redirectUri)}`;
   };
 
   const handleConnectLeetcode = async (e: React.FormEvent) => {
@@ -414,7 +621,7 @@ export default function ProfessionalProfilePage() {
       {/* OAuth Sync Overlay */}
       {isOAuthProcessing && (
         <div className="fixed inset-0 bg-background/90 backdrop-blur-md z-50 flex items-center justify-center animate-in fade-in duration-300">
-          <div className="text-center space-y-6 max-w-md w-full p-8 glass rounded-[2.5rem] border border-primary/20 shadow-2xl relative overflow-hidden">
+          <div className="text-center space-y-6 max-w-md w-full p-6 sm:p-8 glass rounded-[2rem] sm:rounded-[2.5rem] border border-primary/20 shadow-2xl relative overflow-hidden">
             <div className="absolute -top-12 -left-12 w-32 h-32 bg-primary/10 rounded-full blur-2xl" />
             <div className="absolute -bottom-12 -right-12 w-32 h-32 bg-accent/10 rounded-full blur-2xl" />
 
@@ -443,12 +650,40 @@ export default function ProfessionalProfilePage() {
       )}
 
       {/* Hero Header */}
-      <div className="spics-hero flex flex-col md:flex-row items-center justify-between gap-6 glass rounded-[2.5rem] p-8 card-premium relative overflow-hidden bg-gradient-to-br from-primary/10 via-background to-accent/5">
+      <div className="spics-hero flex flex-col md:flex-row items-center justify-between gap-6 glass rounded-[2rem] sm:rounded-[2.5rem] p-6 sm:p-8 card-premium relative overflow-hidden bg-gradient-to-br from-primary/10 via-background to-accent/5">
         <div className="absolute top-0 right-0 w-64 h-64 bg-primary/5 rounded-full blur-3xl -mr-32 -mt-32" />
         <div className="flex flex-col md:flex-row items-center gap-6 z-10">
-          <div className="w-24 h-24 rounded-[2rem] bg-gradient-to-tr from-primary to-accent text-primary-foreground flex items-center justify-center text-4xl font-black shadow-xl">
-            {user?.name?.[0]?.toUpperCase() ?? '?'}
+          <div className="relative group w-24 h-24 rounded-[2rem] bg-gradient-to-tr from-primary to-accent text-primary-foreground flex items-center justify-center text-4xl font-black shadow-xl overflow-hidden">
+            {liPicUrl ? (
+              <img src={liPicUrl} alt="" className="h-full w-full object-cover" onError={() => { setLiPicUrl(null); setLinkedinImgError(true); }} />
+            ) : profilePictureUrl && !pictureError ? (
+              <img src={profilePictureUrl} alt="" className="h-full w-full object-cover" referrerPolicy="no-referrer" onError={() => setPictureError(true)} />
+            ) : (
+              user?.name?.[0]?.toUpperCase() ?? '?'
+            )}
+
+            {/* Upload Camera Overlay */}
+            <div 
+              onClick={() => fileInputRef.current?.click()}
+              className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col items-center justify-center cursor-pointer text-white z-20"
+            >
+              <Camera size={20} className="mb-0.5 animate-bounce" />
+              <span className="text-[9px] font-bold uppercase tracking-wider">Upload</span>
+            </div>
+
+            {pictureUploading && (
+              <div className="absolute inset-0 bg-black/40 flex items-center justify-center z-30">
+                <Loader2 className="animate-spin text-white" size={24} />
+              </div>
+            )}
           </div>
+          <input 
+            type="file"
+            ref={fileInputRef}
+            className="hidden"
+            accept="image/*"
+            onChange={handlePictureUpload}
+          />
           <div className="text-center md:text-left">
             <h1 className="text-3xl font-black tracking-tight">{user?.name ?? 'Student'}</h1>
             <p className="text-sm font-semibold text-primary/80 mt-1 uppercase tracking-widest">
@@ -477,6 +712,22 @@ export default function ProfessionalProfilePage() {
                 ✏️ {profile ? 'Edit Profile' : 'Create Profile'}
               </button>
             )}
+            {!editing && (
+              <button
+                onClick={() => fileInputRef.current?.click()}
+                className="w-full sm:w-auto px-4 py-2.5 rounded-xl border border-border bg-card hover:bg-muted font-bold text-xs uppercase tracking-widest transition-all text-center justify-center flex items-center gap-1.5 hover:scale-105"
+              >
+                <Camera size={14} /> Upload Photo
+              </button>
+            )}
+            {profile?.github_username && !editing && (
+              <button
+                onClick={handleUseGithubPhoto}
+                className="w-full sm:w-auto px-4 py-2.5 rounded-xl border border-border bg-card hover:bg-muted font-bold text-xs uppercase tracking-widest transition-all text-center justify-center flex items-center gap-1.5 hover:scale-105"
+              >
+                <Github size={14} /> Use GitHub Photo
+              </button>
+            )}
             {insights?.ai_status !== 'processing' && (
               <button
                 onClick={() => triggerAI.mutate()}
@@ -494,7 +745,7 @@ export default function ProfessionalProfilePage() {
 
       {/* Edit Form */}
       {editing && (
-        <div ref={editSectionRef} className="glass rounded-[2.5rem] p-8 card-premium animate-in zoom-in-95 duration-200">
+        <div ref={editSectionRef} className="glass rounded-[2rem] sm:rounded-[2.5rem] p-6 sm:p-8 card-premium animate-in zoom-in-95 duration-200">
           <h2 className="text-xl font-black mb-6 flex items-center gap-2">✍️ Edit Professional Profile</h2>
 
           {/* Domain Selector */}
@@ -541,6 +792,15 @@ export default function ProfessionalProfilePage() {
               />
             </div>
             <div className="space-y-2">
+              <label className="text-xs font-black uppercase tracking-wider text-muted-foreground ml-1">LinkedIn Profile URL</label>
+              <input
+                className="w-full p-4 bg-muted/40 rounded-2xl border border-border outline-none ring-primary/20 focus:ring-4 transition-all text-sm font-medium"
+                placeholder="https://linkedin.com/in/yourusername"
+                value={form.linkedin_url ?? ''}
+                onChange={e => setForm(f => ({ ...f, linkedin_url: e.target.value }))}
+              />
+            </div>
+            <div className="space-y-2">
               <label className="text-xs font-black uppercase tracking-wider text-muted-foreground ml-1">HackerRank Username</label>
               <input
                 className="w-full p-4 bg-muted/40 rounded-2xl border border-border outline-none ring-primary/20 focus:ring-4 transition-all text-sm font-medium"
@@ -558,6 +818,45 @@ export default function ProfessionalProfilePage() {
                 onChange={e => setForm(f => ({ ...f, codechef_username: e.target.value }))}
               />
             </div>
+            <div className="space-y-2 md:col-span-2 p-4 bg-muted/20 rounded-2xl border border-border mt-2 flex flex-col sm:flex-row items-center justify-between gap-4">
+              <div className="flex items-center gap-4">
+                <div className="w-16 h-16 rounded-2xl bg-gradient-to-tr from-primary to-accent overflow-hidden flex items-center justify-center text-2xl font-black text-white shadow flex-shrink-0 relative group">
+                  {profilePictureUrl && !pictureError ? (
+                    <img src={profilePictureUrl} alt="" className="h-full w-full object-cover" />
+                  ) : (
+                    user?.name?.[0]?.toUpperCase() ?? '?'
+                  )}
+                  {pictureUploading && (
+                    <div className="absolute inset-0 bg-black/40 flex items-center justify-center">
+                      <Loader2 className="animate-spin text-white" size={16} />
+                    </div>
+                  )}
+                </div>
+                <div>
+                  <p className="text-sm font-bold">Profile Portrait Photo</p>
+                  <p className="text-xs text-muted-foreground">Upload a custom professional picture or sync with GitHub.</p>
+                </div>
+              </div>
+              <div className="flex gap-2 w-full sm:w-auto">
+                <button
+                  type="button"
+                  onClick={() => fileInputRef.current?.click()}
+                  className="flex-1 sm:flex-none px-4 py-2 rounded-xl bg-primary text-primary-foreground font-black text-xs uppercase tracking-widest hover:scale-105 transition-all shadow"
+                >
+                  <Camera size={12} className="inline mr-1" /> Upload
+                </button>
+                {profile?.github_username && (
+                  <button
+                    type="button"
+                    onClick={handleUseGithubPhoto}
+                    className="flex-1 sm:flex-none px-4 py-2 rounded-xl border border-border bg-card hover:bg-muted font-bold text-xs uppercase tracking-widest transition-all"
+                  >
+                    <Github size={12} className="inline mr-1" /> Use GitHub
+                  </button>
+                )}
+              </div>
+            </div>
+
             <div className="space-y-2 flex items-center justify-between p-4 bg-muted/20 rounded-2xl border border-border mt-4">
               <div>
                 <p className="text-sm font-bold">Public Directory Visibility</p>
@@ -592,8 +891,8 @@ export default function ProfessionalProfilePage() {
         </div>
       )}
 
-      {/* CONNECTORS GRID (GitHub, LeetCode) */}
-      <div className="grid md:grid-cols-2 gap-6">
+      {/* CONNECTORS GRID (GitHub, LinkedIn, LeetCode) */}
+      <div className="grid md:grid-cols-3 gap-6">
         {/* GitHub Connector */}
         <div className="glass rounded-[2rem] p-6 border border-border flex flex-col justify-between card-premium bg-gradient-to-b from-[#1b1f23]/10 to-transparent">
           <div>
@@ -738,6 +1037,92 @@ export default function ProfessionalProfilePage() {
             )}
           </div>
         </div>
+
+        {/* LinkedIn Connector */}
+        <div className="glass rounded-[2rem] p-6 border border-border flex flex-col justify-between card-premium bg-gradient-to-b from-[#0a66c2]/10 to-transparent">
+          <div>
+            <div className="flex items-center justify-between mb-4">
+              <div className="p-3 rounded-2xl bg-[#0a66c2]/10 text-[#0a66c2]">
+                <Linkedin size={28} />
+              </div>
+              <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider ${profile?.linkedin_url
+                  ? 'bg-emerald-500/10 text-emerald-500'
+                  : 'bg-muted text-muted-foreground'
+                }`}>
+                {profile?.linkedin_url ? 'CONNECTED' : 'PENDING'}
+              </span>
+            </div>
+            <h3 className="text-lg font-extrabold tracking-tight">LinkedIn Connect</h3>
+            <p className="text-xs text-muted-foreground/80 mt-1">
+              Link your LinkedIn profile to showcase your professional network and verified credentials.
+            </p>
+          </div>
+          <div className="mt-6 pt-6 border-t border-border/40">
+            {profile?.linkedin_url ? (
+              <div className="space-y-4">
+                <div className="flex items-center gap-3 p-3 rounded-xl bg-muted/40 border border-border/50">
+                  <div className="h-10 w-10 rounded-full overflow-hidden bg-[#0a66c2]/10 border border-[#0a66c2]/20 flex items-center justify-center flex-shrink-0">
+                    {liPicUrl ? (
+                      <img src={liPicUrl} alt="LinkedIn Profile" className="h-full w-full object-cover animate-in fade-in duration-300" />
+                    ) : profilePictureUrl && !linkedinImgError ? (
+                      <img 
+                        src={profilePictureUrl} 
+                        alt="LinkedIn Profile" 
+                        className="h-full w-full object-cover animate-in fade-in duration-300" 
+                        onError={() => setLinkedinImgError(true)}
+                      />
+                    ) : (
+                      <span className="text-[#0a66c2] font-black text-sm uppercase">
+                        {profile.linkedin_url.replace('https://www.linkedin.com/in/', '').charAt(0) || 'L'}
+                      </span>
+                    )}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-[10px] font-black uppercase tracking-wider text-muted-foreground">Profile</p>
+                    <a
+                      href={profile.linkedin_url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="font-extrabold text-xs flex items-center gap-1 hover:text-[#0a66c2] transition-colors truncate"
+                    >
+                      {profile.linkedin_url.replace('https://www.linkedin.com/in/', '').replace(/\/$/, '')} <ExternalLink size={10} className="flex-shrink-0" />
+                    </a>
+                    {profile.linkedin_url.includes('ZLobRxQJca') && (
+                      <p className="text-[10px] text-amber-500 font-semibold mt-1 leading-normal">
+                        ⚠️ LinkedIn returned your private security ID (hash) instead of your public handle. Click <strong>Switch Account</strong> below and enter your clean username (e.g. <code>codewithsakthi</code>) to make the link work!
+                      </p>
+                    )}
+                  </div>
+                </div>
+                <div className="flex gap-2">
+                  <button
+                    onClick={() => {
+                      setLinkedinInput(profile.linkedin_url || '');
+                      setShowLinkedinModal(true);
+                    }}
+                    className="flex-1 py-2.5 rounded-xl bg-[#0a66c2]/10 border border-[#0a66c2]/20 text-[#0a66c2] hover:bg-[#0a66c2]/20 text-[10px] font-black uppercase tracking-wider transition-all flex items-center justify-center gap-1.5"
+                  >
+                    <RefreshCw size={12} /> Switch Account
+                  </button>
+                  <button
+                    onClick={handleDisconnectLinkedIn}
+                    className="px-3 py-2.5 rounded-xl border border-rose-500/20 bg-rose-500/5 hover:bg-rose-500/10 text-rose-500 transition-all flex items-center justify-center"
+                    title="Disconnect LinkedIn Account"
+                  >
+                    <Trash2 size={12} />
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <button
+                onClick={() => setShowLinkedinModal(true)}
+                className="w-full py-3 rounded-xl bg-[#0a66c2] text-white font-black text-xs uppercase tracking-widest hover:scale-102 transition-all flex items-center justify-center gap-2 shadow-lg shadow-[#0a66c2]/25"
+              >
+                <Linkedin size={16} /> Link LinkedIn Profile
+              </button>
+            )}
+          </div>
+        </div>
       </div>
 
       {/* AI Insights Panel */}
@@ -746,7 +1131,7 @@ export default function ProfessionalProfilePage() {
       {/* DEVELOPER ASSETS: PORTFOLIO & RESUME */}
       <div className="grid md:grid-cols-2 gap-6">
         {/* Portfolio URL Card */}
-        <div className="glass rounded-[2rem] p-6 border border-border flex items-center justify-between card-premium bg-gradient-to-b from-primary/5 to-transparent">
+        <div className="glass rounded-[2rem] p-6 border border-border flex flex-col sm:flex-row sm:items-center justify-between gap-4 card-premium bg-gradient-to-b from-primary/5 to-transparent">
           <div className="flex items-center gap-4">
             <div className="p-4 rounded-2xl bg-primary/10 text-primary">
               <Globe size={28} />
@@ -779,7 +1164,7 @@ export default function ProfessionalProfilePage() {
         </div>
 
         {/* Resume Uploader Card */}
-        <div className="glass rounded-[2rem] p-6 border border-border flex items-center justify-between card-premium bg-gradient-to-b from-accent/5 to-transparent">
+        <div className="glass rounded-[2rem] p-6 border border-border flex flex-col sm:flex-row sm:items-center justify-between gap-4 card-premium bg-gradient-to-b from-accent/5 to-transparent">
           <div className="flex items-center gap-4">
             <div className="p-4 rounded-2xl bg-accent/10 text-accent">
               <FileText size={28} />
@@ -838,9 +1223,9 @@ export default function ProfessionalProfilePage() {
       {/* DETAILED PROJECTS & CREDENTIALS ROW */}
       <div className="grid md:grid-cols-2 gap-6">
         {/* Projects Catalog */}
-        <div className="glass rounded-[2.5rem] p-8 card-premium flex flex-col justify-between">
+        <div className="glass rounded-[2rem] sm:rounded-[2.5rem] p-6 sm:p-8 card-premium flex flex-col justify-between">
           <div>
-            <div className="flex items-center justify-between mb-6">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
               <div>
                 <h3 className="text-xl font-extrabold tracking-tight flex items-center gap-2">
                   <Terminal size={20} className="text-primary" /> Academic Projects
@@ -914,9 +1299,9 @@ export default function ProfessionalProfilePage() {
         </div>
 
         {/* Certifications Catalog */}
-        <div className="glass rounded-[2.5rem] p-8 card-premium flex flex-col justify-between">
+        <div className="glass rounded-[2rem] sm:rounded-[2.5rem] p-6 sm:p-8 card-premium flex flex-col justify-between">
           <div>
-            <div className="flex items-center justify-between mb-6">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
               <div>
                 <h3 className="text-xl font-extrabold tracking-tight flex items-center gap-2">
                   <Award size={20} className="text-[#0a66c2]" /> Industry Certifications
@@ -995,7 +1380,7 @@ export default function ProfessionalProfilePage() {
         <div className="grid md:grid-cols-2 gap-6">
           {/* GitHub detailed panel */}
           {githubData && !githubData.error && (
-            <div className="glass rounded-[2.5rem] p-8 card-premium flex flex-col justify-between">
+            <div className="glass rounded-[2rem] sm:rounded-[2.5rem] p-6 sm:p-8 card-premium flex flex-col justify-between">
               <div>
                 <h3 className="text-xl font-extrabold tracking-tight mb-2 flex items-center gap-2">
                   <Github size={20} className="text-primary" /> GitHub Developer DNA
@@ -1059,7 +1444,7 @@ export default function ProfessionalProfilePage() {
 
           {/* LeetCode detailed stats panel */}
           {leetcodeData && (
-            <div className="glass rounded-[2.5rem] p-8 card-premium flex flex-col justify-between">
+            <div className="glass rounded-[2rem] sm:rounded-[2.5rem] p-6 sm:p-8 card-premium flex flex-col justify-between">
               <div>
                 <h3 className="text-xl font-extrabold tracking-tight mb-2 flex items-center gap-2">
                   <Award size={20} className="text-[#ffa116]" /> LeetCode Solution Breakdown
@@ -1192,6 +1577,73 @@ export default function ProfessionalProfilePage() {
                     type="submit"
                     disabled={!!syncStatus}
                     className="flex-1 btn-primary justify-center text-xs"
+                  >
+                    {syncStatus ? <Loader2 className="animate-spin" size={14} /> : <span>Verify & Connect</span>}
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* LINKEDIN CONNECT MODAL */}
+      {showLinkedinModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 animate-in fade-in duration-200">
+          <div className="absolute inset-0 bg-background/80 backdrop-blur-sm" onClick={() => setShowLinkedinModal(false)} />
+          <div className="glass max-w-md w-full relative z-10 p-8 rounded-3xl border border-border shadow-2xl animate-in zoom-in-95 duration-200 card-premium">
+            <h3 className="text-xl font-black mb-2 flex items-center gap-2">
+              <Linkedin size={24} className="text-[#0a66c2]" /> Connect LinkedIn Profile
+            </h3>
+            <p className="text-xs text-muted-foreground mb-6">
+              Link your profile to import your professional network, certifications, and experience into your academic portfolio.
+            </p>
+
+            <div className="space-y-4">
+              {/* Method B: Public Username / URL Sync */}
+              <form onSubmit={handleConnectLinkedIn} className="space-y-4">
+                <div>
+                  <label className="text-[10px] font-black uppercase tracking-wider text-muted-foreground ml-1">LinkedIn Profile URL or Username</label>
+                  <div className="relative mt-2">
+                    <input
+                      type="text"
+                      className="w-full p-4 pr-16 bg-muted/40 rounded-2xl border border-border outline-none ring-primary/20 focus:ring-4 transition-all text-sm font-semibold"
+                      placeholder="e.g. your-username or https://linkedin.com/in/username"
+                      value={linkedinInput}
+                      onChange={e => setLinkedinInput(e.target.value)}
+                      required
+                    />
+                    {linkedinInput && (
+                      <button
+                        type="button"
+                        onClick={() => setLinkedinInput('')}
+                        className="absolute right-4 top-1/2 -translate-y-1/2 text-xs font-black uppercase tracking-widest text-rose-500 hover:text-rose-600 transition-colors p-1"
+                        title="Clear Input"
+                      >
+                        Clear
+                      </button>
+                    )}
+                  </div>
+                </div>
+
+                {syncStatus && (
+                  <div className="p-4 bg-[#0a66c2]/10 border border-[#0a66c2]/20 text-[#0a66c2] text-xs font-bold rounded-xl text-center animate-pulse">
+                    {syncStatus}
+                  </div>
+                )}
+
+                <div className="flex gap-3 pt-2">
+                  <button
+                    type="button"
+                    onClick={() => setShowLinkedinModal(false)}
+                    className="flex-1 px-4 py-3.5 rounded-xl border border-border bg-card hover:bg-muted font-bold text-xs uppercase tracking-widest transition-colors"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={!!syncStatus}
+                    className="flex-1 bg-[#0a66c2] text-white font-black text-xs uppercase tracking-widest rounded-xl hover:scale-[1.02] hover:bg-[#004182] transition-all flex items-center justify-center gap-2"
                   >
                     {syncStatus ? <Loader2 className="animate-spin" size={14} /> : <span>Verify & Connect</span>}
                   </button>

@@ -187,11 +187,24 @@ export const useConnectLeetCode = (studentId: number) => {
   });
 };
 
-// ── LinkedIn Connect Hook ──────────────────────────────────────────────────────
+// ── LinkedIn Connect Hooks ─────────────────────────────────────────────────────
 export const useConnectLinkedIn = (studentId: number) => {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: () => api.connectLinkedIn(),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: KEYS.profile(studentId) });
+      qc.invalidateQueries({ queryKey: KEYS.readiness(studentId) });
+      qc.invalidateQueries({ queryKey: KEYS.skills(studentId) });
+      qc.invalidateQueries({ queryKey: KEYS.certs(studentId) });
+    },
+  });
+};
+
+export const useLinkedInCallback = (studentId: number) => {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (code: string) => api.linkedinCallback(code),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: KEYS.profile(studentId) });
       qc.invalidateQueries({ queryKey: KEYS.readiness(studentId) });

@@ -25,6 +25,13 @@ function GitHubCallbackHandler() {
   return <Navigate to={encodedCode ? `/dashboard?tab=Professional&code=${encodedCode}` : '/dashboard?tab=Professional'} replace />;
 }
 
+function LinkedInCallbackHandler() {
+  const [searchParams] = useSearchParams();
+  const code = searchParams.get('code');
+  const encodedCode = code ? encodeURIComponent(code) : null;
+  return <Navigate to={encodedCode ? `/dashboard?tab=Professional&linkedin_code=${encodedCode}` : '/dashboard?tab=Professional'} replace />;
+}
+
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
@@ -45,6 +52,7 @@ function App() {
 
   useEffect(() => {
     document.documentElement.setAttribute('data-theme', theme);
+    document.documentElement.classList.toggle('dark', theme === 'dark');
   }, [theme]);
 
   const handleLogout = () => {
@@ -69,6 +77,10 @@ function App() {
                 <Route
                   path="/auth/github/callback"
                   element={<GitHubCallbackHandler />}
+                />
+                <Route
+                  path="/auth/linkedin/callback"
+                  element={<LinkedInCallbackHandler />}
                 />
                 
                 <Route
@@ -109,8 +121,8 @@ function App() {
               </Routes>
             </Suspense>
 
-            {/* Floating Gemini Chat appears everywhere when authenticated */}
-            {isAuthenticated && <GeminiChat />}
+            {/* Floating Gemini Chat appears everywhere when authenticated (except for admin who has a first-class inline tab) */}
+            {isAuthenticated && userRole !== 'admin' && <GeminiChat />}
           </div>
         </Router>
       </ErrorBoundary>

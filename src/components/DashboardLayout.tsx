@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useRef } from 'react';
+import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { Search, Bell, User, ChevronRight, LogOut, ShieldCheck, Menu } from 'lucide-react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import Sidebar from './Sidebar';
@@ -9,6 +9,8 @@ import AICommandBar from './AICommandBar';
 import NotificationBell from './NotificationBell';
 import { useThemeStore } from '../store/themeStore';
 import { useAuthStore } from '../store/authStore';
+import api from '../api/client';
+import { useProfile } from '../features/professional-identity/hooks';
 
 interface DashboardLayoutProps {
   children: React.ReactNode;
@@ -26,6 +28,51 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
   const userMenuRef = useRef<HTMLDivElement>(null);
   const { theme, toggleTheme } = useThemeStore();
   const { user, logout } = useAuthStore();
+  const userRole = (user as any)?.role?.name || (user as any)?.role || 'student';
+  const role = 
+    userRole === 'admin' 
+    ? 'admin' 
+    : ['staff', 'faculty', 'hod', 'director'].includes(userRole.toLowerCase())
+      ? 'staff'
+      : 'student';
+  const studentId = (user as any)?.student_id || (user as any)?.id || 0;
+  const { data: profProfile } = useProfile(role === 'student' ? studentId : 0);
+  const [linkedinImgError, setLinkedinImgError] = useState(false);
+  const [pictureError, setPictureError] = useState(false);
+  const [linkedinPicUrl, setLinkedinPicUrl] = useState<string | null>(null);
+  const { token } = useAuthStore();
+  const [pictureTimestamp, setPictureTimestamp] = useState(Date.now());
+
+  useEffect(() => {
+    setLinkedinImgError(false);
+    setPictureError(false);
+    setPictureTimestamp(Date.now());
+  }, [profProfile?.picture_url, profProfile?.student_id, profProfile?.github_username]);
+
+  const baseUrl = (api as any).defaults.baseURL as string;
+  const profilePictureUrl = (studentId && (profProfile?.picture_url || profProfile?.github_username))
+    ? `${baseUrl}/professional/profile/${studentId}/picture?t=${pictureTimestamp}`
+    : '';
+
+  useEffect(() => {
+    if (profProfile?.linkedin_cache_data && token) {
+      const baseUrl = (api as any).defaults.baseURL as string;
+      fetch(`${baseUrl}/professional/profile/linkedin-picture`, {
+        headers: { Authorization: `Bearer ${token}` },
+      })
+        .then(r => {
+          if (!r.ok) throw new Error("Failed to fetch LinkedIn picture");
+          return r.blob();
+        })
+        .then(blob => {
+          setLinkedinPicUrl(URL.createObjectURL(blob));
+        })
+        .catch(() => setLinkedinPicUrl(null));
+    } else {
+      setLinkedinPicUrl(null);
+    }
+  }, [profProfile?.linkedin_cache_data, token]);
+
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
   const activeTab = searchParams.get('tab') || 'Overview';
@@ -34,13 +81,6 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
   useEffect(() => {
     setIsMobileMenuOpen(false);
   }, [searchParams]);
-  const userRole = (user as any)?.role?.name || (user as any)?.role || 'student';
-  const role = 
-    userRole === 'admin' 
-    ? 'admin' 
-    : ['staff', 'faculty', 'hod', 'director'].includes(userRole.toLowerCase())
-      ? 'staff'
-      : 'student';
 
   const handleLogout = () => {
     logout();
@@ -95,6 +135,22 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
       window.removeEventListener('mouseup', stopResizing);
     };
   }, [resize, stopResizing]);
+
+  useEffect(() => {
+    const updateWidth = () => {
+      if (window.innerWidth >= 1024) {
+        document.documentElement.style.setProperty('--sidebar-width', `${width}px`);
+      } else {
+        document.documentElement.style.setProperty('--sidebar-width', '0px');
+      }
+    };
+    updateWidth();
+    window.addEventListener('resize', updateWidth);
+    return () => {
+      window.removeEventListener('resize', updateWidth);
+      document.documentElement.style.setProperty('--sidebar-width', '0px');
+    };
+  }, [width]);
 
   return (
     <div className={`flex min-h-screen bg-background text-foreground transition-colors duration-300 ${isResizing ? 'cursor-col-resize' : ''}`}>
@@ -191,8 +247,14 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
                 onClick={() => setUserMenuOpen((v) => !v)}
                 className="flex items-center gap-1.5 rounded-full p-1 hover:bg-muted transition-colors"
               >
-                <div className="h-8 w-8 rounded-full bg-primary/10 text-primary flex items-center justify-center">
-                  <User size={18} />
+                <div className="h-8 w-8 rounded-full bg-primary/10 text-primary flex items-center justify-center overflow-hidden border border-border/40">
+                  {linkedinPicUrl && !linkedinImgError ? (
+                    <img src={linkedinPicUrl} alt="Profile" className="h-full w-full object-cover" onError={() => { setLinkedinPicUrl(null); setLinkedinImgError(true); }} />
+                  ) : profilePictureUrl && !pictureError ? (
+                    <img src={profilePictureUrl} alt="Profile" className="h-full w-full object-cover" referrerPolicy="no-referrer" onError={() => setPictureError(true)} />
+                  ) : (
+                    <User size={18} />
+                  )}
                 </div>
                 <span className="text-sm font-bold hidden lg:block pr-2">{(user as any)?.name?.split(' ')[0] || (role === 'admin' ? 'Admin' : 'Me')}</span>
               </button>

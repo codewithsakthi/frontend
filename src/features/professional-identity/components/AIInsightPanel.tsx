@@ -11,7 +11,7 @@ export const AIInsightPanel: React.FC<AIInsightPanelProps> = ({ insights }) => {
 
   if (insights.ai_status === 'pending' || insights.ai_status === 'processing') {
     return (
-      <div className="glass rounded-[2.5rem] p-8 card-premium text-center space-y-4">
+      <div className="glass rounded-[2rem] sm:rounded-[2.5rem] p-6 sm:p-8 card-premium text-center space-y-4">
         <Sparkles className="animate-spin text-primary mx-auto" size={32} />
         <h3 className="text-lg font-bold">Refining AI Capability Matrix...</h3>
         <p className="text-sm text-muted-foreground">The AI engine is compiling your multi-dimensional score. Results will reload automatically.</p>
@@ -29,7 +29,7 @@ export const AIInsightPanel: React.FC<AIInsightPanelProps> = ({ insights }) => {
   ];
 
   return (
-    <div className="glass rounded-[2.5rem] p-8 card-premium space-y-8 relative overflow-hidden">
+    <div className="glass rounded-[2rem] sm:rounded-[2.5rem] p-6 sm:p-8 card-premium space-y-8 relative overflow-hidden">
       <div className="absolute top-0 right-0 w-64 h-64 bg-accent/5 rounded-full blur-3xl -mr-32 -mt-32 pointer-events-none" />
       
       {/* Panel Header */}

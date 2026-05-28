@@ -130,6 +130,7 @@ export interface AdminCohortAction {
 }
 
 export interface AdminDirectoryStudent {
+  id?: number;
   roll_no: string;
   reg_no?: string | null;
   name: string;
@@ -414,6 +415,7 @@ export interface AIInsightSummary {
 }
 
 export interface Student360Profile {
+  student_id?: number | null;
   roll_no: string;
   reg_no?: string | null;
   student_name: string;

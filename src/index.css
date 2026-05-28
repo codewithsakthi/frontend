@@ -1,5 +1,6 @@
 @import url("https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800&display=swap");
 @import "tailwindcss";
+@custom-variant dark (&:where(.dark, .dark *));
 
 @theme {
   --font-sans: "Outfit", ui-sans-serif, system-ui, sans-serif;
@@ -65,6 +66,7 @@
 
 @layer base {
   :root {
+    --sidebar-width: 0px;
     --panel: rgba(249, 252, 253, 0.9);
     --panel-strong: rgba(255, 255, 255, 0.98);
     --hero-start: #0f172a;

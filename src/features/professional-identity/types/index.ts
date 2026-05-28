@@ -25,6 +25,8 @@ export interface ProfessionalProfile {
   career_interest?: string[];
   resume_file_path?: string;
   resume_uploaded_at?: string;
+  picture_url?: string;
+  linkedin_cache_data?: Record<string, unknown>;
   profile_completion_score?: number;
   is_public: boolean;
   created_at?: string;
@@ -187,6 +189,7 @@ export interface ProfileCreateRequest {
   github_username?: string;
   portfolio_url?: string;
   linkedin_url?: string;
+  picture_url?: string;
   leetcode_username?: string;
   hackerrank_username?: string;
   codechef_username?: string;

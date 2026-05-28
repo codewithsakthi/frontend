@@ -47,6 +47,53 @@ import AIStudentCoach from './AIStudentCoach';
 import { useAuthStore } from '../store/authStore';
 import { filterGradedSubjects } from '../utils/subjectFilters.js';
 
+function getInitials(name: string): string {
+  if (!name) return "?";
+  const parts = name.trim().split(/\s+/);
+  if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase();
+  return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
+}
+
+function getAvatarBgColor(rollNo: string): string {
+  let hash = 0;
+  for (let i = 0; i < rollNo.length; i++) {
+    hash = rollNo.charCodeAt(i) + ((hash << 5) - hash);
+  }
+  const hue = Math.abs(hash % 360);
+  return `hsl(${hue}, 65%, 45%)`;
+}
+
+function StudentAvatar({ id, name, rollNo, size = 'h-16 w-16 text-lg font-black' }: { id?: number | null; name: string; rollNo: string; size?: string }) {
+  const [error, setError] = React.useState(false);
+  const baseUrl = (api as any).defaults.baseURL || 'http://localhost:8001/api/v1';
+
+  React.useEffect(() => {
+    setError(false);
+  }, [id, rollNo]);
+
+  if (error || !id) {
+    const initials = getInitials(name);
+    const bgColor = getAvatarBgColor(rollNo || name);
+    return (
+      <div 
+        className={`${size} rounded-full flex items-center justify-center text-white shrink-0 shadow`}
+        style={{ backgroundColor: bgColor }}
+      >
+        {initials}
+      </div>
+    );
+  }
+
+  return (
+    <img
+      src={`${baseUrl}/professional/profile/${id}/picture?t=${rollNo}`}
+      alt={name}
+      onError={() => setError(true)}
+      className={`${size} rounded-full object-cover shrink-0 border-2 border-background shadow`}
+    />
+  );
+}
+
 interface StudentProfile360Props {
   rollNo: string | null;
   onClose: () => void;
@@ -217,11 +264,11 @@ export default function StudentProfile360({ rollNo, onClose }: StudentProfile360
   if (!rollNo) return null;
 
   return (
-    <aside ref={drawerRef} className="fixed inset-y-0 right-0 z-50 w-full max-w-4xl overflow-y-auto border-l border-border/70 bg-[var(--panel-strong)] p-6 shadow-[0_0_40px_rgba(2,6,23,0.25)]">
+    <aside ref={drawerRef} className="fixed inset-y-0 right-0 z-50 w-full max-w-4xl overflow-y-auto border-l border-border/70 bg-[var(--panel-strong)] p-4 sm:p-6 shadow-[0_0_40px_rgba(2,6,23,0.25)]">
       <button
         type="button"
         onClick={() => drawerRef.current?.scrollTo({ top: 0, behavior: 'smooth' })}
-        className="fixed bottom-20 right-5 z-[60] flex h-12 w-12 items-center justify-center rounded-full border border-border bg-card/95 text-foreground shadow-[0_18px_50px_rgba(15,23,42,0.24)] backdrop-blur md:right-8"
+        className="fixed bottom-[148px] lg:bottom-20 right-5 z-[60] flex h-12 w-12 items-center justify-center rounded-full border border-border bg-card/95 text-foreground shadow-[0_18px_50px_rgba(15,23,42,0.24)] backdrop-blur md:right-8"
         aria-label="Scroll to top"
         title="Scroll to top"
       >
@@ -231,25 +278,26 @@ export default function StudentProfile360({ rollNo, onClose }: StudentProfile360
       <button
         type="button"
         onClick={onClose}
-        className="fixed bottom-5 right-5 z-[60] rounded-full border border-border bg-card/95 px-4 py-3 text-sm font-semibold text-foreground shadow-[0_18px_50px_rgba(15,23,42,0.24)] backdrop-blur md:right-8"
+        className="fixed bottom-[84px] lg:bottom-5 right-5 z-[60] rounded-full border border-border bg-card/95 px-4 py-3 text-sm font-semibold text-foreground shadow-[0_18px_50px_rgba(15,23,42,0.24)] backdrop-blur md:right-8"
       >
         Close Student 360
       </button>
 
-      <div className="flex items-start justify-between gap-4 rounded-2xl border border-border/50 bg-gradient-to-r from-primary/5 to-sky-500/5 p-6">
+      <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4 rounded-2xl border border-border/50 bg-gradient-to-r from-primary/5 to-sky-500/5 p-4 sm:p-6">
         <div className="flex-1">
           <p className="text-[11px] font-black uppercase tracking-[0.22em] text-primary">Student 360</p>
-          <div className="flex items-center gap-3 mt-3">
+          <div className="flex flex-col sm:flex-row items-center sm:items-start gap-4 mt-3 text-center sm:text-left">
+            <StudentAvatar id={data?.student_id} name={data?.student_name || rollNo || ''} rollNo={rollNo || ''} size="h-16 w-16 text-lg font-black" />
             <div>
-              <h2 className="text-3xl font-bold tracking-tight text-foreground">{data?.student_name || rollNo}</h2>
-              <p className="mt-2 text-sm text-muted-foreground">
+              <h2 className="text-2xl sm:text-3xl font-bold tracking-tight text-foreground">{data?.student_name || rollNo}</h2>
+              <p className="mt-1 text-sm text-muted-foreground">
                 <span className="font-semibold">{data?.batch}</span> • 
                 <span className="font-semibold"> Roll {rollNo}</span>
                 {data?.reg_no && <span> • Reg {data.reg_no}</span>}
               </p>
             </div>
           </div>
-          <div className="mt-3 flex flex-wrap items-center gap-2">
+          <div className="mt-3 flex flex-wrap justify-center sm:justify-start items-center gap-2">
             <span className="inline-flex items-center gap-1.5 rounded-full border border-primary/30 bg-primary/8 px-3 py-1 text-xs font-bold uppercase tracking-wider text-primary">
               <CheckCircle2 size={12} />
               Sem {data?.current_semester || '-'}
@@ -263,18 +311,18 @@ export default function StudentProfile360({ rollNo, onClose }: StudentProfile360
             </span>
           </div>
         </div>
-        <div className="flex flex-col gap-2">
+        <div className="flex sm:flex-col gap-2 w-full sm:w-auto mt-2 sm:mt-0">
           {data && (
             <button
               type="button"
-              className="flex items-center gap-1.5 rounded-lg border border-primary/30 bg-primary/8 px-4 py-2.5 text-xs font-bold uppercase tracking-wider text-primary transition-all hover:bg-primary/12 hover:border-primary/50"
+              className="flex-1 sm:flex-none flex items-center justify-center gap-1.5 rounded-lg border border-primary/30 bg-primary/8 px-4 py-2.5 text-xs font-bold uppercase tracking-wider text-primary transition-all hover:bg-primary/12 hover:border-primary/50"
               onClick={() => downloadWithToken(`admin/export/resume/${data.roll_no}.pdf`, `${data.roll_no}-resume.pdf`)}
             >
               <Download size={14} />
               Export Resume
             </button>
           )}
-          <button type="button" onClick={onClose} className="tab-chip">Close</button>
+          <button type="button" onClick={onClose} className="flex-1 sm:flex-none border border-border hover:bg-muted bg-card px-4 py-2.5 text-xs font-bold rounded-lg uppercase tracking-wider transition-all">Close</button>
         </div>
       </div>
 

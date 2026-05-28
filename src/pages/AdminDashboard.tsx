@@ -51,6 +51,7 @@ import api from "../api/client";
 import { useAuthStore } from "../store/authStore";
 import { useThemeStore } from "../store/themeStore";
 import StudentProfile360 from "../components/StudentProfile360";
+import GeminiChat from "../components/GeminiChat";
 import { validatePassThreshold } from "../utils/performanceUtils";
 import AICopilot from "../components/AICopilot";
 import NotificationBell from "../components/NotificationBell";
@@ -69,6 +70,53 @@ import type {
   TimetableEntry,
   TimetableListResponse,
 } from "../types/enterprise";
+function getInitials(name: string): string {
+  if (!name) return "?";
+  const parts = name.trim().split(/\s+/);
+  if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase();
+  return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
+}
+
+function getAvatarBgColor(rollNo: string): string {
+  let hash = 0;
+  for (let i = 0; i < rollNo.length; i++) {
+    hash = rollNo.charCodeAt(i) + ((hash << 5) - hash);
+  }
+  const hue = Math.abs(hash % 360);
+  return `hsl(${hue}, 65%, 45%)`;
+}
+
+function StudentAvatar({ id, name, rollNo, size = 'h-8 w-8 text-xs font-bold' }: { id?: number; name: string; rollNo: string; size?: string }) {
+  const [error, setError] = useState(false);
+  const baseUrl = (api as any).defaults.baseURL || 'http://localhost:8001/api/v1';
+
+  useEffect(() => {
+    setError(false);
+  }, [id, rollNo]);
+
+  if (error || !id) {
+    const initials = getInitials(name);
+    const bgColor = getAvatarBgColor(rollNo || name);
+    return (
+      <div 
+        className={`${size} rounded-full flex items-center justify-center text-white shrink-0 shadow-sm`}
+        style={{ backgroundColor: bgColor }}
+      >
+        {initials}
+      </div>
+    );
+  }
+
+  return (
+    <img
+      src={`${baseUrl}/professional/profile/${id}/picture?t=${rollNo}`}
+      alt={name}
+      onError={() => setError(true)}
+      className={`${size} rounded-full object-cover shrink-0 border border-border/40 shadow-sm`}
+    />
+  );
+}
+
 function Metric({
   label,
   value,
@@ -104,9 +152,10 @@ function StudentStrip({
     <button
       type="button"
       onClick={() => onOpen(item.roll_no)}
-      className="row-card w-full text-left group"
+      className="row-card w-full text-left group flex items-center gap-3"
     >
-      <div>
+      <StudentAvatar id={item.id} name={item.name} rollNo={item.roll_no} size="h-9 w-9 text-xs font-bold" />
+      <div className="min-w-0 flex-1">
         <p className="text-sm font-semibold text-foreground group-hover:text-primary transition-colors">
           {item.name}
         </p>
@@ -1731,28 +1780,30 @@ export default function AdminDashboard() {
 
   return (
     <div className="w-full pb-24 lg:pb-10">
-      <div className="flex flex-wrap gap-2 mb-6">
-        {[
-          "Overview",
-          "Performance",
-          "Students",
-          "Attendance",
-          "Placements",
-          "Time Table",
-          "Security",
-          "Profile",
-          "Staff",
-          "Subjects",
-        ].map((tab) => (
-          <button
-            key={tab}
-            onClick={() => setActiveTab(tab)}
-            className={`tab-chip ${activeTab === tab ? "!bg-primary !text-white shadow" : ""}`}
-          >
-            {tab}
-          </button>
-        ))}
-      </div>
+      {activeTab !== "AI" && (
+        <div className="flex flex-wrap gap-2 mb-6">
+          {[
+            "Overview",
+            "Performance",
+            "Students",
+            "Attendance",
+            "Placements",
+            "Time Table",
+            "Security",
+            "Profile",
+            "Staff",
+            "Subjects",
+          ].map((tab) => (
+            <button
+              key={tab}
+              onClick={() => setActiveTab(tab)}
+              className={`tab-chip ${activeTab === tab ? "!bg-primary !text-white shadow" : ""}`}
+            >
+              {tab}
+            </button>
+          ))}
+        </div>
+      )}
 
       {activeTab === "Leaderboard" && (
         <LeaderboardView onSelectStudent={setSelectedRollNo} />
@@ -2413,15 +2464,18 @@ export default function AdminDashboard() {
                           <td className="px-4 py-4">
                             <button
                               onClick={() => setSelectedRollNo(item.roll_no)}
-                              className="text-left group"
+                              className="flex items-center gap-3 text-left group"
                             >
-                              <p className="font-semibold group-hover:text-primary">
-                                {item.name}
-                              </p>
+                              <StudentAvatar id={item.id} name={item.name} rollNo={item.roll_no} size="h-8 w-8 text-xs font-bold" />
+                              <div>
+                                <p className="font-semibold group-hover:text-primary leading-tight">
+                                  {item.name}
+                                </p>
 
-                              <p className="text-[10px] text-muted-foreground uppercase">
-                                {item.email?.split("@")[0]}
-                              </p>
+                                <p className="text-[10px] text-muted-foreground uppercase mt-0.5">
+                                  {item.email?.split("@")[0]}
+                                </p>
+                              </div>
                             </button>
                           </td>
 
@@ -2483,9 +2537,10 @@ export default function AdminDashboard() {
                     <button
                       key={`m-${item.roll_no}`}
                       onClick={() => setSelectedRollNo(item.roll_no)}
-                      className="row-card w-full text-left group"
+                      className="row-card w-full text-left group flex items-center gap-3"
                     >
-                      <div className="min-w-0">
+                      <StudentAvatar id={item.id} name={item.name} rollNo={item.roll_no} size="h-10 w-10 text-sm font-bold" />
+                      <div className="min-w-0 flex-1">
                         <div className="flex items-center gap-2">
                           <span className="text-xs font-mono font-bold text-primary">
                             #{item.rank || "-"}
@@ -3683,6 +3738,10 @@ export default function AdminDashboard() {
             </div>
           </div>
         </div>
+      )}
+
+      {activeTab === "AI" && (
+        <GeminiChat inline={true} />
       )}
 
       {activeTab === "ASIE" && (

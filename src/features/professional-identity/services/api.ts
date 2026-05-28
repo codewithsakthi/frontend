@@ -84,6 +84,9 @@ export const connectLeetCode = (username: string): Promise<{ message: string }> 
 export const connectLinkedIn = (): Promise<{ message: string; detail: string }> =>
   api.post(`${BASE}/profile/connect-linkedin`);
 
+export const linkedinCallback = (code: string): Promise<{ message: string; detail: string }> =>
+  api.post(`${BASE}/profile/connect-linkedin`, { code });
+
 // ── Career Readiness ───────────────────────────────────────────────────────────
 export const getCareerReadiness = (studentId: number): Promise<CareerReadiness> =>
   api.get(`${BASE}/career-readiness/${studentId}`);

@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
   BarChart2, 
   ShieldAlert, 
@@ -31,6 +31,11 @@ const NavItem = ({ icon: Icon, label, href, isActive }: NavItemProps) => {
   const [searchParams, setSearchParams] = useSearchParams();
   
   const handleClick = (e: React.MouseEvent) => {
+    if (href === '/gemini-chat' || href === '#claude-chat') {
+      e.preventDefault();
+      window.dispatchEvent(new CustomEvent('open-claude-chat'));
+      return;
+    }
     if (href.startsWith('?')) {
       e.preventDefault();
       const params = new URLSearchParams(href);
@@ -108,6 +113,20 @@ export default function Sidebar({ role = 'student', width, onResizeStart, isResi
   const { theme, toggleTheme } = useThemeStore();
   const [searchParams] = useSearchParams();
   const activeTab = searchParams.get('tab') || 'Overview';
+  const [isChatOpen, setIsChatOpen] = useState(false);
+
+  useEffect(() => {
+    const handleOpen = () => setIsChatOpen(true);
+    const handleClose = () => setIsChatOpen(false);
+
+    window.addEventListener('open-claude-chat', handleOpen);
+    window.addEventListener('close-claude-chat', handleClose);
+
+    return () => {
+      window.removeEventListener('open-claude-chat', handleOpen);
+      window.removeEventListener('close-claude-chat', handleClose);
+    };
+  }, []);
 
   return (
     <aside 
@@ -134,12 +153,10 @@ export default function Sidebar({ role = 'student', width, onResizeStart, isResi
             <>
               <NavGroup title="Overview">
                 <NavItem icon={LayoutDashboard} label="Command Center" href="?tab=Overview" isActive={activeTab === 'Overview'} />
+                <NavItem icon={Zap} label="Claude AI Analyst" href="?tab=AI" isActive={activeTab === 'AI'} />
                 <NavItem icon={Target} label="AI Talent Matrix" href="?tab=ASIE" isActive={activeTab === 'ASIE'} />
                 <NavItem icon={ShieldAlert} label="Risk Radar" href="?tab=Risk" isActive={activeTab === 'Risk'} />
                 <NavItem icon={Target} label="Placement Pipeline" href="?tab=Placements" isActive={activeTab === 'Placements'} />
-              </NavGroup>
-              <NavGroup title="AI">
-                <NavItem icon={Zap} label="Gemini AI Chat" href="/gemini-chat" isActive={window.location.pathname === '/gemini-chat'} />
               </NavGroup>
 
               <NavGroup title="Analytics">
@@ -149,9 +166,6 @@ export default function Sidebar({ role = 'student', width, onResizeStart, isResi
                 <NavItem icon={Layers} label="Faculty Impact" href="#faculty-impact" />
                 <NavItem icon={BarChart2} label="Attendance Report" href="?tab=Attendance" isActive={activeTab === 'Attendance'} />
               </NavGroup>
-              <NavGroup title="AI">
-                <NavItem icon={Zap} label="Gemini AI Chat" href="/gemini-chat" isActive={window.location.pathname === '/gemini-chat'} />
-              </NavGroup>
 
               <NavGroup title="Management">
                 <NavItem icon={User} label="Profile Settings" href="?tab=Profile" isActive={activeTab === 'Profile'} />
@@ -159,9 +173,6 @@ export default function Sidebar({ role = 'student', width, onResizeStart, isResi
                 <NavItem icon={Users} label="Student Directory" href="?tab=Students" isActive={activeTab === 'Students'} />
                 <NavItem icon={Users} label="Staff Management" href="?tab=Staff" isActive={activeTab === 'Staff'} />
                 <NavItem icon={Layers} label="Subject Management" href="?tab=Subjects" isActive={activeTab === 'Subjects'} />
-              </NavGroup>
-              <NavGroup title="AI">
-                <NavItem icon={Zap} label="Gemini AI Chat" href="/gemini-chat" isActive={window.location.pathname === '/gemini-chat'} />
               </NavGroup>
             </>
           ) : role === 'staff' ? (
