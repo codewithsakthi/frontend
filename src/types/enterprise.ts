@@ -168,10 +168,6 @@ export interface FamilyDetailsRecord {
   parent_guardian_name?: string | null;
   occupation?: string | null;
   parent_phone?: string | null;
-  emergency_name?: string | null;
-  emergency_address?: string | null;
-  emergency_phone?: string | null;
-  emergency_email?: string | null;
   father_name?: string | null;
   mother_name?: string | null;
   parent_occupation?: string | null;
@@ -180,16 +176,16 @@ export interface FamilyDetailsRecord {
   emergency_contact_name?: string | null;
   emergency_contact_phone?: string | null;
   emergency_contact_relation?: string | null;
+  emergency_contact_address?: string | null;
+  emergency_contact_email?: string | null;
 }
 
 export interface PreviousAcademicRecord {
-  qualification?: string | null;
   school_name?: string | null;
+  institution?: string | null;
+  board_university?: string | null;
   passing_year?: string | null;
   percentage?: number | null;
-  level?: string | null;
-  institution?: string | null;
-  year_passing?: string | null;
 }
 
 export interface CounselorDiaryRecord {
@@ -359,6 +355,64 @@ export interface StudentSemesterVelocity {
   internal_avg: number;
 }
 
+export interface ProfessionalProfileSummary {
+  github_username?: string | null;
+  linkedin_url?: string | null;
+  portfolio_url?: string | null;
+  leetcode_username?: string | null;
+  hackerrank_username?: string | null;
+  primary_domain?: string | null;
+  bio?: string | null;
+  profile_completion_score?: number | null;
+}
+
+export interface ProjectSummaryItem {
+  project_id: number;
+  title: string;
+  tech_stack?: string[] | null;
+  github_url?: string | null;
+  complexity_level?: string | null;
+  completion_status?: string | null;
+  verification_status?: string | null;
+}
+
+export interface SkillSummaryItem {
+  skill_name: string;
+  category?: string | null;
+  proficiency_level?: string | null;
+}
+
+export interface CertSummaryItem {
+  title: string;
+  provider?: string | null;
+  verification_status?: string | null;
+}
+
+export interface GitHubAnalysisSummary {
+  public_repos: number;
+  followers: number;
+  total_stars: number;
+  top_languages?: Record<string, number> | null;
+  contribution_activity?: string | null;
+}
+
+export interface CareerReadinessSummary {
+  readiness_band?: string | null;
+  total_projects: number;
+  total_skills: number;
+  total_certifications: number;
+  ai_career_readiness_score?: number | null;
+  has_github: boolean;
+  has_resume: boolean;
+}
+
+export interface AIInsightSummary {
+  ai_summary?: string | null;
+  strengths?: string[] | null;
+  improvement_areas?: string[] | null;
+  career_fit_roles?: Array<Record<string, unknown>> | null;
+}
+
 export interface Student360Profile {
   roll_no: string;
   reg_no?: string | null;
@@ -382,6 +436,29 @@ export interface Student360Profile {
   peer_benchmark: StudentPeerBenchmark;
   risk_drivers: StudentRiskDriver[];
   recommended_actions: string[];
+  professional_profile?: ProfessionalProfileSummary | null;
+  professional_projects?: ProjectSummaryItem[];
+  professional_skills?: SkillSummaryItem[];
+  professional_certifications?: CertSummaryItem[];
+  github_analysis?: GitHubAnalysisSummary | null;
+  career_readiness?: CareerReadinessSummary | null;
+  ai_insights?: AIInsightSummary | null;
+  capability_scores?: CapabilityScoreSummary | null;
+}
+
+export interface CapabilityScoreSummary {
+  academic_score?: number | null;
+  technical_score?: number | null;
+  leadership_score?: number | null;
+  sports_score?: number | null;
+  creativity_score?: number | null;
+  discipline_score?: number | null;
+  communication_score?: number | null;
+  consistency_score?: number | null;
+  placement_score?: number | null;
+  growth_score?: number | null;
+  spi_score?: number | null;
+  profile_type?: string | null;
 }
 
 export interface RiskRegistryResponse {

@@ -134,6 +134,7 @@ export default function Sidebar({ role = 'student', width, onResizeStart, isResi
             <>
               <NavGroup title="Overview">
                 <NavItem icon={LayoutDashboard} label="Command Center" href="?tab=Overview" isActive={activeTab === 'Overview'} />
+                <NavItem icon={Target} label="AI Talent Matrix" href="?tab=ASIE" isActive={activeTab === 'ASIE'} />
                 <NavItem icon={ShieldAlert} label="Risk Radar" href="?tab=Risk" isActive={activeTab === 'Risk'} />
                 <NavItem icon={Target} label="Placement Pipeline" href="?tab=Placements" isActive={activeTab === 'Placements'} />
               </NavGroup>
@@ -183,8 +184,10 @@ export default function Sidebar({ role = 'student', width, onResizeStart, isResi
             <>
               <NavGroup title="Academic">
                 <NavItem icon={LayoutDashboard} label="Overview" href="?tab=Overview" isActive={activeTab === 'Overview'} />
+                <NavItem icon={Target} label="Student DNA" href="?tab=DNA" isActive={activeTab === 'DNA'} />
                 <NavItem icon={Zap} label="Performance" href="?tab=Performance" isActive={activeTab === 'Performance'} />
                 <NavItem icon={CalendarCheck} label="Attendance" href="?tab=Attendance" isActive={activeTab === 'Attendance'} />
+                <NavItem icon={Trophy} label="Professional Profile" href="?tab=Professional" isActive={activeTab === 'Professional'} />
               </NavGroup>
               <NavGroup title="Personal">
                 <NavItem icon={User} label="My Profile" href="?tab=Profile" isActive={activeTab === 'Profile'} />

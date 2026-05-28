@@ -24,6 +24,7 @@ import AttendancePanel from '../components/AttendancePanel';
 import SchedulePanel from '../components/SchedulePanel';
 import StaffPerformancePanel from '../components/StaffPerformancePanel';
 import StaffInsightsPanel from '../components/StaffInsightsPanel';
+import StudentProfile360 from '../components/StudentProfile360';
 import { SectionTitle } from '../components/DashboardComponents';
 import { useAuthStore } from '../store/authStore';
 import { mapStaffDashboard } from '../api/mappers';
@@ -98,6 +99,7 @@ const SubjectCard = ({ subject, onManageMarks }) => (
 
 export default function StaffDashboard() {
   const [selectedSubject, setSelectedSubject] = useState(null);
+  const [selectedRollNo, setSelectedRollNo] = useState(null);
   const [searchParams, setSearchParams] = useSearchParams();
   const queryClient = useQueryClient();
   const { user, updateUser } = useAuthStore();
@@ -293,7 +295,7 @@ export default function StaffDashboard() {
       )}
 
       {activeTab === 'Insights' && (
-        <StaffInsightsPanel />
+        <StaffInsightsPanel onOpenStudentProfile={setSelectedRollNo} />
       )}
 
       {activeTab === 'Profile' && (
@@ -398,6 +400,11 @@ export default function StaffDashboard() {
           onClose={() => setSelectedSubject(null)}
         />
       )}
+
+      <StudentProfile360
+        rollNo={selectedRollNo}
+        onClose={() => setSelectedRollNo(null)}
+      />
     </div>
   );
 }

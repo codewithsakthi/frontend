@@ -66,7 +66,7 @@ export default function GeminiChat() {
   return (
     <>
       {/* Floating Button */}
-      <button
+      {/* <button
         aria-label="Open Gemini Chat"
         onClick={() => setOpen(v => !v)}
         style={{
@@ -90,7 +90,7 @@ export default function GeminiChat() {
         }}
       >
         <span role="img" aria-label="Gemini">💬</span>
-      </button>
+      </button> */}
 
       {/* Chat Window */}
       {open && (

@@ -1,5 +1,5 @@
 import React, { Suspense, lazy, useEffect, useState } from 'react';
-import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route, Navigate, useSearchParams } from 'react-router-dom';
 import DashboardLayout from './components/DashboardLayout';
 import ProtectedRoute from './components/ProtectedRoute';
 import PwaInstallPrompt from './components/PwaInstallPrompt';
@@ -17,6 +17,13 @@ const StaffDashboard = lazy(() => import('./pages/StaffDashboard'));
 import ConsentScreen from './components/ConsentScreen';
 import GeminiChat from './components/GeminiChat.jsx';
 import { ROLES, getDefaultRouteForRole } from './routes/config';
+
+function GitHubCallbackHandler() {
+  const [searchParams] = useSearchParams();
+  const code = searchParams.get('code');
+  const encodedCode = code ? encodeURIComponent(code) : null;
+  return <Navigate to={encodedCode ? `/dashboard?tab=Professional&code=${encodedCode}` : '/dashboard?tab=Professional'} replace />;
+}
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -57,6 +64,11 @@ function App() {
                 <Route
                   path="/login"
                   element={isAuthenticated ? <Navigate to={getRedirectPath()} replace /> : <Login />}
+                />
+
+                <Route
+                  path="/auth/github/callback"
+                  element={<GitHubCallbackHandler />}
                 />
                 
                 <Route

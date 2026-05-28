@@ -2,6 +2,7 @@ import React, { useMemo, useState, useEffect } from "react";
 import LeaderboardView from "../features/admin/views/LeaderboardView";
 import PlacementView from "../features/admin/views/PlacementView";
 import RiskRadarView from "../features/admin/views/RiskRadarView";
+import ASIEAdminDashboard from "../features/admin/views/ASIEAdminDashboard";
 import { useSearchParams } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import {
@@ -989,7 +990,7 @@ export default function AdminDashboard() {
         name: "",
         email: "",
         department: "",
-        password: "",
+        password: "password123",
       });
       setEditingStaff(null);
       setStaffModalOpen(false);
@@ -1042,7 +1043,7 @@ export default function AdminDashboard() {
         name: "",
         email: "",
         department: "",
-        password: "",
+        password: "password123",
       });
       setEditingStaff(null);
       setStaffModalOpen(false);
@@ -1082,7 +1083,7 @@ export default function AdminDashboard() {
           name: "",
           email: "",
           department: "",
-          password: "",
+          password: "password123",
         });
       }
       refetchStaff();
@@ -1164,7 +1165,7 @@ export default function AdminDashboard() {
     name: "",
     email: "",
     department: "",
-    password: "",
+    password: "password123",
   });
 
   const [editingStaff, setEditingStaff] = useState<StaffProfile | null>(null);
@@ -1382,7 +1383,7 @@ export default function AdminDashboard() {
       createStaffMutation.mutate({
         username: staffForm.username,
 
-        password: staffForm.password || "temp123",
+        password: staffForm.password || "password123",
 
         name: staffForm.name,
 
@@ -3037,7 +3038,7 @@ export default function AdminDashboard() {
                     name: "",
                     email: "",
                     department: "",
-                    password: "",
+                    password: "password123",
                   });
 
                   setStaffModalOpen(true);
@@ -3341,7 +3342,7 @@ export default function AdminDashboard() {
                     name: "",
                     email: "",
                     department: "",
-                    password: "",
+                    password: "password123",
                   });
                 }}
               >
@@ -3618,7 +3619,7 @@ export default function AdminDashboard() {
                     name: "",
                     email: "",
                     department: "",
-                    password: "",
+                    password: "password123",
                   });
                 }}
                 disabled={
@@ -3682,6 +3683,10 @@ export default function AdminDashboard() {
             </div>
           </div>
         </div>
+      )}
+
+      {activeTab === "ASIE" && (
+        <ASIEAdminDashboard onOpenStudentProfile={setSelectedRollNo} />
       )}
 
       {activeTab === "Subjects" && (

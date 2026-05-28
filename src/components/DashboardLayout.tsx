@@ -118,6 +118,7 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
                  activeTab === 'Profile' ? 'Profile Settings' : 
                  activeTab === 'Security' ? 'Security Access' : 
                  activeTab === 'Students' ? 'Student Management' :
+                 activeTab === 'Professional' ? 'Professional Identity' :
                  activeTab}
               </span>
             </div>

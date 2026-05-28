@@ -16,6 +16,7 @@ import {
   AlertTriangle,
   ArrowUp,
   Search,
+  FileText,
 } from 'lucide-react';
 import {
   LineChart,
@@ -144,7 +145,7 @@ const enrichGradeRecord = (record: any) => {
   
   // Determine result status: PASS unless grade is U, F, or FAIL
   const isFailGrade = calculatedGrade && ['U', 'F', 'FAIL'].includes(String(calculatedGrade).toUpperCase());
-  const resultStatus = record.result_status || (calculatedGrade ? (isFailGrade ? 'FAIL' : 'PASS') : null);
+  const resultStatus = record.result_status || (calculatedGrade ? (isFailGrade ? 'Fail' : 'Pass') : null);
   
   // Calculate grade point
   const gradePoint = record.grade_point ?? getGradePoint(calculatedGrade);
@@ -285,6 +286,258 @@ export default function StudentProfile360({ rollNo, onClose }: StudentProfile360
         </div>
       ) : data ? (
         <div className="mt-8 space-y-5 pb-24">
+          {/* PROFESSIONAL IDENTITY - SPICS DATA */}
+          {data.professional_profile && (
+            <section className="rounded-2xl border border-violet-500/20 bg-gradient-to-br from-violet-500/5 to-sky-500/5 p-5">
+              <div className="mb-4 flex items-center gap-2">
+                <Award size={18} className="text-violet-500" />
+                <p className="text-sm font-bold text-foreground">Professional Identity</p>
+                {data.career_readiness?.readiness_band && (
+                  <span className={`ml-auto inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wider ${
+                    data.career_readiness.readiness_band === 'Ready' ? 'bg-emerald-500/10 text-emerald-600 ring-1 ring-emerald-500/20' :
+                    data.career_readiness.readiness_band === 'Near Ready' ? 'bg-amber-500/10 text-amber-600 ring-1 ring-amber-500/20' :
+                    'bg-rose-500/10 text-rose-600 ring-1 ring-rose-500/20'
+                  }`}>
+                    {data.career_readiness.readiness_band}
+                  </span>
+                )}
+              </div>
+
+              <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+                <div className="rounded-lg border border-border/30 bg-card/30 p-3">
+                  <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Domain</p>
+                  <p className="mt-1 text-sm font-semibold text-foreground">{data.professional_profile.primary_domain || '—'}</p>
+                </div>
+                <div className="rounded-lg border border-border/30 bg-card/30 p-3">
+                  <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Profile Score</p>
+                  <p className="mt-1 text-sm font-semibold text-foreground">
+                    {data.professional_profile.profile_completion_score != null
+                      ? `${data.professional_profile.profile_completion_score}%`
+                      : '—'}
+                  </p>
+                </div>
+                <div className="rounded-lg border border-border/30 bg-card/30 p-3">
+                  <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Projects</p>
+                  <p className="mt-1 text-sm font-semibold text-foreground">{data.career_readiness?.total_projects ?? data.professional_projects?.length ?? 0}</p>
+                </div>
+                <div className="rounded-lg border border-border/30 bg-card/30 p-3">
+                  <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Skills</p>
+                  <p className="mt-1 text-sm font-semibold text-foreground">{data.career_readiness?.total_skills ?? data.professional_skills?.length ?? 0}</p>
+                </div>
+                <div className="rounded-lg border border-border/30 bg-card/30 p-3">
+                  <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Resume</p>
+                  {data.career_readiness?.has_resume ? (
+                    <div className="mt-1 flex flex-col gap-1">
+                      <button
+                        onClick={async () => {
+                          try {
+                            const token = useAuthStore.getState().token;
+                            const VITE_API_URL = import.meta.env.VITE_API_URL;
+                            const FALLBACK_URL = 'https://spark-backend-n5s2.onrender.com';
+                            const API_BASE = (VITE_API_URL || FALLBACK_URL).replace(/\/+$/, '');
+                            const resp = await fetch(`${API_BASE}/api/v1/admin/export/uploaded-resume/${data.roll_no}`, {
+                              headers: { Authorization: `Bearer ${token}` },
+                            });
+                            if (!resp.ok) { alert('Uploaded resume not found'); return; }
+                            const blob = await resp.blob();
+                            const url = window.URL.createObjectURL(blob);
+                            window.open(url, '_blank');
+                            setTimeout(() => window.URL.revokeObjectURL(url), 60000);
+                          } catch { alert('Failed to load resume'); }
+                        }}
+                        className="inline-flex items-center gap-1 text-sm font-semibold text-emerald-500 hover:text-emerald-400"
+                      >
+                        <FileText size={12} />
+                        View Uploaded
+                      </button>
+                      <button
+                        onClick={() => downloadWithToken(`admin/export/resume/${data.roll_no}.pdf`, `${data.roll_no}-resume.pdf`)}
+                        className="inline-flex items-center gap-1 text-xs font-medium text-muted-foreground hover:text-foreground"
+                      >
+                        <Download size={10} />
+                        Generated PDF
+                      </button>
+                    </div>
+                  ) : (
+                    <p className="mt-1 text-sm font-semibold text-muted-foreground">Not uploaded</p>
+                  )}
+                </div>
+                <div className="rounded-lg border border-border/30 bg-card/30 p-3">
+                  <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Certs</p>
+                  <p className="mt-1 text-sm font-semibold text-foreground">{data.career_readiness?.total_certifications ?? data.professional_certifications?.length ?? 0}</p>
+                </div>
+              </div>
+
+              {/* External links */}
+              <div className="mt-3 flex flex-wrap gap-2">
+                {data.professional_profile.github_username && (
+                  <a href={`https://github.com/${data.professional_profile.github_username}`} target="_blank" rel="noopener noreferrer"
+                    className="inline-flex items-center gap-1 rounded-lg border border-border/30 bg-card/40 px-2.5 py-1.5 text-xs text-foreground hover:bg-card/60">
+                    GitHub: @{data.professional_profile.github_username}
+                  </a>
+                )}
+                {data.professional_profile.linkedin_url && (
+                  <a href={data.professional_profile.linkedin_url} target="_blank" rel="noopener noreferrer"
+                    className="inline-flex items-center gap-1 rounded-lg border border-border/30 bg-card/40 px-2.5 py-1.5 text-xs text-foreground hover:bg-card/60">
+                    LinkedIn
+                  </a>
+                )}
+                {data.professional_profile.leetcode_username && (
+                  <span className="inline-flex items-center gap-1 rounded-lg border border-border/30 bg-card/40 px-2.5 py-1.5 text-xs text-foreground">
+                    LeetCode: @{data.professional_profile.leetcode_username}
+                  </span>
+                )}
+                {data.professional_profile.portfolio_url && (
+                  <a href={data.professional_profile.portfolio_url} target="_blank" rel="noopener noreferrer"
+                    className="inline-flex items-center gap-1 rounded-lg border border-border/30 bg-card/40 px-2.5 py-1.5 text-xs text-foreground hover:bg-card/60">
+                    Portfolio
+                  </a>
+                )}
+              </div>
+
+              {/* GitHub stats */}
+              {data.github_analysis && (
+                <div className="mt-3 grid gap-2 sm:grid-cols-4">
+                  <div className="rounded-lg bg-card/20 p-2 text-center">
+                    <p className="text-lg font-black text-foreground">{data.github_analysis.public_repos}</p>
+                    <p className="text-[9px] font-semibold uppercase text-muted-foreground">Repos</p>
+                  </div>
+                  <div className="rounded-lg bg-card/20 p-2 text-center">
+                    <p className="text-lg font-black text-foreground">{data.github_analysis.followers}</p>
+                    <p className="text-[9px] font-semibold uppercase text-muted-foreground">Followers</p>
+                  </div>
+                  <div className="rounded-lg bg-card/20 p-2 text-center">
+                    <p className="text-lg font-black text-foreground">{data.github_analysis.total_stars}</p>
+                    <p className="text-[9px] font-semibold uppercase text-muted-foreground">Stars</p>
+                  </div>
+                  <div className="rounded-lg bg-card/20 p-2 text-center">
+                    <p className="text-lg font-black text-foreground">{data.career_readiness?.ai_career_readiness_score != null ? `${data.career_readiness.ai_career_readiness_score}` : '—'}</p>
+                    <p className="text-[9px] font-semibold uppercase text-muted-foreground">AI Readiness</p>
+                  </div>
+                </div>
+              )}
+
+              {/* Projects list */}
+              {data.professional_projects && data.professional_projects.length > 0 && (
+                <details className="mt-3 group">
+                  <summary className="cursor-pointer text-xs font-bold text-muted-foreground hover:text-foreground">
+                    Projects ({data.professional_projects.length})
+                  </summary>
+                  <div className="mt-2 space-y-1.5">
+                    {data.professional_projects.map((p) => (
+                      <div key={p.project_id} className="flex items-center justify-between rounded-lg border border-border/20 bg-card/20 px-3 py-1.5">
+                        <div className="min-w-0 flex-1">
+                          <p className="text-xs font-medium text-foreground truncate">{p.title}</p>
+                          {p.tech_stack && p.tech_stack.length > 0 && (
+                            <p className="text-[10px] text-muted-foreground">{p.tech_stack.join(', ')}</p>
+                          )}
+                        </div>
+                        <span className={`ml-2 shrink-0 rounded-full px-2 py-0.5 text-[9px] font-bold uppercase ${
+                          p.completion_status === 'completed' ? 'bg-emerald-500/10 text-emerald-600' : 'bg-amber-500/10 text-amber-600'
+                        }`}>{p.completion_status}</span>
+                      </div>
+                    ))}
+                  </div>
+                </details>
+              )}
+
+              {/* Skills list */}
+              {data.professional_skills && data.professional_skills.length > 0 && (
+                <details className="mt-2 group">
+                  <summary className="cursor-pointer text-xs font-bold text-muted-foreground hover:text-foreground">
+                    Skills ({data.professional_skills.length})
+                  </summary>
+                  <div className="mt-2 flex flex-wrap gap-1.5">
+                    {data.professional_skills.map((s, i) => (
+                      <span key={i} className="inline-flex items-center gap-1 rounded-full border border-border/30 bg-card/30 px-2.5 py-1 text-[10px] font-medium text-foreground">
+                        {s.skill_name}
+                        {s.proficiency_level && (
+                          <span className="text-[8px] uppercase text-muted-foreground">({s.proficiency_level})</span>
+                        )}
+                      </span>
+                    ))}
+                  </div>
+                </details>
+              )}
+
+              {/* Certifications list */}
+              {data.professional_certifications && data.professional_certifications.length > 0 && (
+                <details className="mt-2 group">
+                  <summary className="cursor-pointer text-xs font-bold text-muted-foreground hover:text-foreground">
+                    Certifications ({data.professional_certifications.length})
+                  </summary>
+                  <div className="mt-2 space-y-1">
+                    {data.professional_certifications.map((c, i) => (
+                      <div key={i} className="flex items-center justify-between rounded-lg border border-border/20 bg-card/20 px-3 py-1.5">
+                        <span className="text-xs text-foreground">{c.title}{c.provider ? ` — ${c.provider}` : ''}</span>
+                      </div>
+                    ))}
+                  </div>
+                </details>
+              )}
+
+              {/* AI Insight */}
+              {data.ai_insights?.ai_summary && (
+                <div className="mt-3 rounded-lg border border-violet-500/10 bg-violet-500/5 p-3">
+                  <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">AI Insight</p>
+                  <p className="mt-1 text-xs text-foreground/80 line-clamp-3">{data.ai_insights.ai_summary}</p>
+                  {data.ai_insights.strengths && data.ai_insights.strengths.length > 0 && (
+                    <div className="mt-2 flex flex-wrap gap-1">
+                      {data.ai_insights.strengths.slice(0, 3).map((s, i) => (
+                        <span key={i} className="rounded-full bg-emerald-500/10 px-2 py-0.5 text-[9px] font-bold text-emerald-600">{s}</span>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
+            </section>
+          )}
+
+          {/* ASIE CAPABILITY SCORES */}
+          {data.capability_scores && (
+            <section className="rounded-2xl border border-indigo-500/20 bg-gradient-to-br from-indigo-500/5 to-purple-500/5 p-5">
+              <div className="mb-4 flex items-center gap-2">
+                <Award size={18} className="text-indigo-500" />
+                <p className="text-sm font-bold text-foreground">SPI Capability Scores</p>
+                {data.capability_scores.spi_score != null && (
+                  <span className="ml-auto inline-flex items-center gap-1 rounded-full bg-primary/10 px-2.5 py-0.5 text-[10px] font-bold text-primary ring-1 ring-primary/20">
+                    SPI: {data.capability_scores.spi_score.toFixed(1)}
+                  </span>
+                )}
+              </div>
+              <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 xl:grid-cols-6">
+                {([
+                  ['Technical', data.capability_scores.technical_score],
+                  ['Leadership', data.capability_scores.leadership_score],
+                  ['Sports Excellence', data.capability_scores.sports_score],
+                  ['Creativity', data.capability_scores.creativity_score],
+                  ['Discipline', data.capability_scores.discipline_score],
+                  ['Communication', data.capability_scores.communication_score],
+                  ['Academic', data.capability_scores.academic_score],
+                  ['Consistency', data.capability_scores.consistency_score],
+                  ['Placement', data.capability_scores.placement_score],
+                  ['Growth', data.capability_scores.growth_score],
+                ] as const).map(([label, score]) => (
+                  <div key={label} className="rounded-lg border border-border/30 bg-card/30 p-3 text-center">
+                    <p className="text-[9px] font-bold uppercase tracking-wider text-muted-foreground">{label}</p>
+                    <p className={`mt-1 text-lg font-black ${
+                      score != null && score >= 75 ? 'text-emerald-500' :
+                      score != null && score >= 50 ? 'text-amber-500' :
+                      'text-muted-foreground'
+                    }`}>{score != null ? score.toFixed(0) : '—'}</p>
+                  </div>
+                ))}
+              </div>
+              {data.capability_scores.profile_type && (
+                <div className="mt-3 text-center">
+                  <span className="inline-flex items-center gap-1 rounded-full bg-indigo-500/10 px-3 py-1 text-[10px] font-bold text-indigo-500 ring-1 ring-indigo-500/20">
+                    {data.capability_scores.profile_type}
+                  </span>
+                </div>
+              )}
+            </section>
+          )}
+
           {/* ADMIN CRITICAL STATUS - TOP PRIORITY */}
           <section className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
             {/* Risk Level */}
@@ -544,7 +797,7 @@ export default function StudentProfile360({ rollNo, onClose }: StudentProfile360
                           <tbody>
                             {semGrades.map((grade, idx) => {
                               const internalMarks = grade.internal_marks !== null && grade.internal_marks !== undefined ? Math.round(grade.internal_marks) : null;
-                              const resultStatus = grade.result_status || (grade.grade && isFailingGrade(grade.grade) ? 'FAIL' : 'PASS');
+                              const resultStatus = grade.result_status || (grade.grade && isFailingGrade(grade.grade) ? 'Fail' : 'Pass');
                               return (
                                 <tr key={`${grade.subject_code}-${selectedTranscriptSem}`} className="border-b border-border/30 hover:bg-muted/20">
                                   <td className="px-3 py-2.5 text-foreground font-medium">{idx + 1}</td>
@@ -557,7 +810,7 @@ export default function StudentProfile360({ rollNo, onClose }: StudentProfile360
                                     </span>
                                   </td>
                                   <td className="px-3 py-2.5 text-center text-foreground text-xs">
-                                    <span className={`inline-block px-2 py-1 rounded-full font-semibold ${resultStatus === 'PASS' ? 'bg-emerald-500/20 text-emerald-700' : 'bg-rose-500/20 text-rose-700'}`}>
+                                    <span className={`inline-block px-2 py-1 rounded-full font-semibold ${String(resultStatus || '').toUpperCase() === 'PASS' ? 'bg-emerald-500/20 text-emerald-700' : 'bg-rose-500/20 text-rose-700'}`}>
                                       {resultStatus || '—'}
                                     </span>
                                   </td>
@@ -1041,7 +1294,7 @@ export default function StudentProfile360({ rollNo, onClose }: StudentProfile360
               </div>
               <div className="rounded-lg border border-border/30 bg-card/30 p-4">
                 <p className="text-xs font-semibold uppercase text-muted-foreground">Emergency Phone</p>
-                <p className="mt-2 text-sm font-medium text-foreground">{record?.family_details?.parent_phone || record?.family_details?.emergency_phone || '—'}</p>
+                <p className="mt-2 text-sm font-medium text-foreground">{record?.family_details?.emergency_contact_phone || record?.family_details?.parent_phone || '—'}</p>
               </div>
               <div className={`rounded-lg border p-4 ${
                 (record?.record_health?.completion_percentage || 0) > 50

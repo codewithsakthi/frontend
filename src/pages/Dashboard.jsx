@@ -18,6 +18,8 @@ import api from '../api/client';
 import { buildStudentIntelligence, fmt, num, CHART_COLORS, GRADE_POINTS } from '../services/academicService';
 import { mapAttendanceSummary, mapCurrentUser, mapStudentPerformance } from '../api/mappers';
 import NotificationBell from '../components/NotificationBell';
+import ASIEStudentDNA from '../components/ASIEStudentDNA';
+import ProfessionalProfilePage from '../features/professional-identity/pages/ProfessionalProfilePage';
 
 // Redundant component definitions removed - imported from DashboardComponents
 
@@ -62,6 +64,14 @@ const Dashboard = () => {
     queryKey: ['me'],
     queryFn: () => api.get('auth/me').then(mapCurrentUser),
     staleTime: 600000,
+  });
+
+  const studentId = user?.student_id || user?.id;
+
+  const { data: profProfile } = useQuery({
+    queryKey: ['professional-profile', studentId],
+    queryFn: () => api.get(`professional/profile/${studentId}`).catch(() => null),
+    enabled: !!studentId,
   });
 
   // Sync profile to store
@@ -276,6 +286,35 @@ const Dashboard = () => {
 
       {activeTab === 'Overview' && (
         <div className="bento-grid">
+          {/* Onboarding Connect Banner */}
+          {(!profProfile || !profProfile.github_username || !profProfile.linkedin_url) && (
+            <div className="col-span-12 glass rounded-[2rem] p-6 mb-2 border border-primary/20 relative overflow-hidden flex flex-col md:flex-row items-center justify-between gap-6 card-premium bg-gradient-to-r from-primary/10 via-background to-accent/5">
+              <div className="absolute top-0 right-0 w-48 h-48 bg-primary/10 rounded-full blur-2xl -mr-24 -mt-24 pointer-events-none" />
+              <div className="flex items-start gap-4">
+                <div className="p-3.5 rounded-2xl bg-primary/10 text-primary shrink-0 animate-pulse">
+                  <Sparkles size={24} />
+                </div>
+                <div>
+                  <h3 className="text-lg font-extrabold tracking-tight">🚀 Complete Your Professional Onboarding</h3>
+                  <p className="text-sm text-muted-foreground/80 mt-1 max-w-2xl">
+                    Connect your **GitHub** and **LinkedIn** accounts to auto-import your projects, view real-time coding analytics, and unlock AI-powered talent insights.
+                  </p>
+                  <div className="flex items-center gap-4 mt-3 text-xs text-primary/80 font-bold uppercase tracking-wider">
+                    {!profProfile?.github_username && <span className="flex items-center gap-1">❌ GitHub Pending</span>}
+                    {profProfile?.github_username && <span className="flex items-center gap-1 text-emerald-500">✔ GitHub Connected</span>}
+                    {!profProfile?.linkedin_url && <span className="flex items-center gap-1">❌ LinkedIn Pending</span>}
+                    {profProfile?.linkedin_url && <span className="flex items-center gap-1 text-emerald-500">✔ LinkedIn Connected</span>}
+                  </div>
+                </div>
+              </div>
+              <button 
+                onClick={() => handleTabChange('Professional')}
+                className="px-5 py-3 rounded-xl bg-primary text-primary-foreground font-black text-xs uppercase tracking-widest hover:scale-105 transition-all shrink-0 shadow-lg shadow-primary/25"
+              >
+                Connect Now
+              </button>
+            </div>
+          )}
           {/* Intelligence Spotlight */}
           <div className="col-span-12 lg:col-span-8 flex flex-col justify-between glass rounded-[2.5rem] p-8 card-premium">
             <div>
@@ -499,6 +538,14 @@ const Dashboard = () => {
             <StudentTimetable semesterOverride={2} />
           </div>
         </div>
+      )}
+
+      {activeTab === 'DNA' && (
+        <ASIEStudentDNA rollNo={rollNo} />
+      )}
+
+      {activeTab === 'Professional' && (
+        <ProfessionalProfilePage />
       )}
 
       {activeTab === 'Performance' && (

@@ -22,7 +22,7 @@ const computeTotal = (internal, exam) => {
 
 const computeResultStatus = (total) => {
   if (total === null || total === undefined) return null;
-  return Number(total) >= 50 ? 'PASS' : 'FAIL';
+  return Number(total) >= 50 ? 'Pass' : 'Fail';
 };
 
 const pivotAssessmentsToMarks = (assessments = []) => {

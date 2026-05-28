@@ -2,10 +2,10 @@ import React from 'react';
 import { Calendar, Clock } from 'lucide-react';
 
 const DAYS = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
-const HOURS = [1, 2, 3, 4, 5, 6, 7];
+const PERIODS = [1, 2, 3, 4, 5, 6, 7];
 
-const hourLabel = (hour) => {
-  switch (hour) {
+const periodLabel = (period) => {
+  switch (period) {
     case 1: return '9:15 - 10:05';
     case 2: return '10:05 - 10:55';
     case 3: return '11:10 - 12:00';
@@ -18,8 +18,8 @@ const hourLabel = (hour) => {
 };
 
 export default function TimetableGrid({ entries = [], title = 'Weekly Timetable', subtitle, legend = true }) {
-  const getEntry = (dayIdx, hour) =>
-    entries.find((e) => e.day_of_week === dayIdx && e.period === hour);
+  const getEntry = (dayIdx, period) =>
+    entries.find((e) => e.day_of_week === dayIdx && e.period === period);
 
   return (
     <div className="space-y-4">
@@ -51,14 +51,14 @@ export default function TimetableGrid({ entries = [], title = 'Weekly Timetable'
         <div className="border-y sm:border border-border/70 sm:rounded-xl md:rounded-[2rem] overflow-hidden bg-[var(--panel)] shadow-[0_8px_30px_rgba(2,6,23,0.5)] md:shadow-[0_18px_45px_rgba(2,6,23,0.85)]">
           <div className="grid grid-cols-8 divide-x divide-border bg-muted/30">
             <div className="p-1 md:p-4" />
-            {HOURS.map((hour) => (
+            {PERIODS.map((period) => (
               <div
-                key={hour}
+                key={period}
                 className="p-1 md:p-4 text-center font-black text-[8px] md:text-[10px] uppercase tracking-widest text-foreground flex flex-col items-center justify-center"
               >
-                <span className="md:hidden">P{hour}</span>
-                <span className="hidden md:inline">Hour {hour}</span>
-                <span className="hidden md:block text-[9px] mt-1 text-foreground/85">{hourLabel(hour)}</span>
+                <span className="md:hidden">P{period}</span>
+                <span className="hidden md:inline">Period {period}</span>
+                <span className="hidden md:block text-[9px] mt-1 text-foreground/85">{periodLabel(period)}</span>
               </div>
             ))}
           </div>
@@ -73,11 +73,11 @@ export default function TimetableGrid({ entries = [], title = 'Weekly Timetable'
                     <span className="hidden md:inline">{day}</span>
                   </span>
                 </div>
-                {HOURS.map((hour) => {
-                  const entry = getEntry(dayIdx, hour);
+                {PERIODS.map((period) => {
+                  const entry = getEntry(dayIdx, period);
                   const isSenior = entry?.semester >= 3;
                   return (
-                    <div key={`${dayIdx}-${hour}`} className="p-0.5 md:p-2 group">
+                    <div key={`${dayIdx}-${period}`} className="p-0.5 md:p-2 group">
                       {entry ? (
                         <div
                           className={`flex flex-col items-center md:items-start justify-center md:justify-start h-full p-1 md:p-3 rounded-md md:rounded-2xl border transition-all overflow-hidden ${
