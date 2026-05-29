@@ -1,6 +1,7 @@
 import { useEffect, useRef, useCallback, useState } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { useAuthStore } from '../store/authStore';
+import { API_BASE } from '../api/client';
 
 /**
  * Universal real-time notification hook.
@@ -122,9 +123,14 @@ export const useNotifications = () => {
       return;
     }
 
-    const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-    const host = window.location.hostname === 'localhost' ? 'localhost:8000' : window.location.host;
-    const base = `${protocol}//${host}/api/v1/ws`;
+    let wsBase = '';
+    if (API_BASE) {
+      wsBase = API_BASE.replace(/^http:/, 'ws:').replace(/^https:/, 'wss:');
+    } else {
+      const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+      wsBase = `${protocol}//${window.location.host}`;
+    }
+    const base = `${wsBase}/api/v1/ws`;
     
     let url = null;
     if (userRole === 'admin') url = `${base}/admin/${userId}`;

@@ -1,5 +1,6 @@
 import { useEffect, useRef, useCallback } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
+import { API_BASE } from '../api/client';
 
 /**
  * Hook to manage real-time attendance updates via WebSocket
@@ -15,9 +16,14 @@ export const useRealTimeAttendance = (rollNo, enabled = true) => {
     if (!enabled || !rollNo) return;
 
     // Determine WebSocket URL
-    const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-    const host = window.location.host;
-    const wsUrl = `${protocol}//${host}/api/v1/ws/attendance/${rollNo}`;
+    let wsBase = '';
+    if (API_BASE) {
+      wsBase = API_BASE.replace(/^http:/, 'ws:').replace(/^https:/, 'wss:');
+    } else {
+      const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+      wsBase = `${protocol}//${window.location.host}`;
+    }
+    const wsUrl = `${wsBase}/api/v1/ws/attendance/${rollNo}`;
 
     try {
       ws.current = new WebSocket(wsUrl);
