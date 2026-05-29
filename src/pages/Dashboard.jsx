@@ -323,7 +323,7 @@ const Dashboard = () => {
                 title="Academic Insight"
                 copy="Automated observations across your semester trajectory."
               />
-              <div className="grid md:grid-cols-2 gap-6 mt-8">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-1 xl:grid-cols-2 gap-6 mt-8">
                 <div className="p-5 rounded-2xl bg-primary/5 border border-primary/10 flex gap-4">
                   <div className="p-3 rounded-xl bg-primary/10 text-primary h-fit">
                     <TrendingUp size={24} />
@@ -373,7 +373,7 @@ const Dashboard = () => {
           </div>
 
           {/* Charts Row */}
-          <div className="col-span-12 lg:col-span-7 glass rounded-[2.5rem] p-8 card-premium">
+          <div className="col-span-12 lg:col-span-7 glass rounded-[2.5rem] p-8 card-premium min-w-0">
             <SectionTitle title="Performance Timeline" copy="Semester-wise GPA trajectory and historical growth." />
             <div className="h-80 w-full mt-6">
               <ResponsiveContainer width="100%" height="100%">
@@ -397,7 +397,7 @@ const Dashboard = () => {
             </div>
           </div>
 
-          <div className="col-span-12 lg:col-span-5 glass rounded-[2.5rem] p-8 card-premium flex flex-col justify-between">
+          <div className="col-span-12 lg:col-span-5 glass rounded-[2.5rem] p-8 card-premium flex flex-col justify-between min-w-0">
             <div>
               <SectionTitle title="Assessment Mastery" copy="Consistency across technical internal evaluations." />
               <div className="h-64 w-full mt-6">
