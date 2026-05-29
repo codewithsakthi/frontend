@@ -121,8 +121,8 @@ function App() {
               </Routes>
             </Suspense>
 
-            {/* Floating Gemini Chat appears everywhere when authenticated (except for admin who has a first-class inline tab) */}
-            {isAuthenticated && userRole !== 'admin' && <GeminiChat />}
+            {/* Floating Gemini Chat appears everywhere when authenticated (except for admin and student roles) */}
+            {isAuthenticated && userRole !== 'admin' && userRole !== 'student' && <GeminiChat />}
           </div>
         </Router>
       </ErrorBoundary>

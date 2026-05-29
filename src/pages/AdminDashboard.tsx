@@ -52,6 +52,7 @@ import { useAuthStore } from "../store/authStore";
 import { useThemeStore } from "../store/themeStore";
 import StudentProfile360 from "../components/StudentProfile360";
 import GeminiChat from "../components/GeminiChat";
+import RAGChat from "../components/RAGChat";
 import { validatePassThreshold } from "../utils/performanceUtils";
 import AICopilot from "../components/AICopilot";
 import NotificationBell from "../components/NotificationBell";
@@ -1793,6 +1794,7 @@ export default function AdminDashboard() {
             "Profile",
             "Staff",
             "Subjects",
+            "AI",
           ].map((tab) => (
             <button
               key={tab}
@@ -3741,7 +3743,7 @@ export default function AdminDashboard() {
       )}
 
       {activeTab === "AI" && (
-        <GeminiChat inline={true} />
+        <RAGChat />
       )}
 
       {activeTab === "ASIE" && (

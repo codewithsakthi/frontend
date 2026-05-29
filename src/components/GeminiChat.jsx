@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Send, Bot, Sparkles, X, ChevronRight, Loader2, Paperclip, MessageSquare } from 'lucide-react';
+import { Send, Bot, Sparkles, X, ChevronRight, Loader2, Paperclip, MessageSquare, Brain, ChevronDown } from 'lucide-react';
 import api from '../api/client';
 import { useAuthStore } from '../store/authStore';
 import { useThemeStore } from '../store/themeStore';
@@ -12,18 +12,26 @@ const SUGGESTED_PROMPTS = [
   { label: '⭐ Find top performers', query: 'Who are the top academic performers in the cohort?' },
 ];
 
+const MODEL_OPTIONS = [
+  { id: 'nvidia/nemotron-3-nano-omni-30b-a3b-reasoning:free', label: 'Nemotron 3 Nano Omni (Free)', hasReasoning: true },
+  { id: 'nvidia/llama-nemotron-embed-vl-1b-v2:free', label: 'Llama Nemotron Embed VL 1B V2 (Free)', hasReasoning: false },
+  { id: 'deepseek/deepseek-r1:free', label: 'DeepSeek R1 (Free)', hasReasoning: true },
+  { id: 'google/gemini-2.5-flash-thinking-exp:free', label: 'Gemini 2.5 Thinking (Free)', hasReasoning: true },
+  { id: 'qwen/qwen-2.5-72b-instruct:free', label: 'Qwen 2.5 72B (Free)', hasReasoning: false },
+];
+
 function Bubble({ from, children }) {
   const isUser = from === 'user';
   return (
     <div className={`flex ${isUser ? 'justify-end' : 'justify-start'} mb-4`}>
       {!isUser && (
-        <div className="w-8 h-8 rounded-full bg-[#cc5a37]/10 border border-[#cc5a37]/20 flex items-center justify-center mr-2.5 mt-0.5 flex-shrink-0 shadow-sm">
+        <div className="w-8 h-8 rounded-full bg-[#cc5a37]/10 border border-[#cc5a37]/20 flex items-center justify-center mr-2.5 mt-0.5 flex-shrink-0 shadow-sm animate-fade-in">
           <Bot size={14} className="text-[#cc5a37]" />
         </div>
       )}
       <div 
         className={`
-          max-w-[80%] rounded-[1.25rem] px-4 py-2.5 text-sm leading-6 shadow-sm border
+          max-w-[80%] rounded-[1.25rem] px-4 py-2.5 text-sm leading-6 shadow-sm border transition-all duration-300
           ${isUser 
             ? 'bg-[#f0ede4] dark:bg-[#1b3542] border-[#e4e1d6] dark:border-[#24414e] text-[#191919] dark:text-[#edf5f7] rounded-tr-sm'
             : 'bg-[#fbfaf7] dark:bg-[#132630] border-[#ecebe4] dark:border-[#24414e] text-[#191919] dark:text-[#edf5f7] rounded-tl-sm'
@@ -37,15 +45,49 @@ function Bubble({ from, children }) {
   );
 }
 
+function ThinkingAccordion({ reasoning, elapsed, isStreaming }) {
+  const [collapsed, setCollapsed] = useState(false);
+  
+  if (!reasoning && !isStreaming) return null;
+
+  return (
+    <div className="mb-3 rounded-xl border border-violet-500/15 bg-violet-500/[0.04] dark:bg-violet-500/[0.02] shadow-sm overflow-hidden transition-all duration-300 max-w-full">
+      <button
+        type="button"
+        onClick={() => setCollapsed(!collapsed)}
+        className="w-full flex items-center justify-between px-3.5 py-2 text-[10px] font-black uppercase tracking-[0.2em] text-violet-600 dark:text-violet-400 hover:bg-violet-500/10 dark:hover:bg-violet-500/10 transition-colors"
+      >
+        <span className="flex items-center gap-2">
+          {isStreaming ? (
+            <Loader2 size={11} className="animate-spin text-violet-500" />
+          ) : (
+            <Brain size={11} className="text-violet-500" />
+          )}
+          <span>{isStreaming ? `Thinking... (${elapsed || 0}s)` : 'Thinking Process'}</span>
+        </span>
+        <ChevronDown size={12} className={`transform transition-transform duration-200 ${collapsed ? '-rotate-90' : ''}`} />
+      </button>
+      {!collapsed && (
+        <div className="border-t border-violet-500/10 px-3.5 py-2.5 text-xs text-muted-foreground/90 font-mono whitespace-pre-wrap leading-relaxed max-h-48 overflow-y-auto">
+          {reasoning || 'Analyzing query parameters...'}
+        </div>
+      )}
+    </div>
+  );
+}
+
 export default function GeminiChat({ inline = false }) {
   const { theme } = useThemeStore();
   const isDark = theme === 'dark';
-  console.log("GeminiChat: theme =", theme, "isDark =", isDark);
 
   const [open, setOpen] = useState(false);
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [selectedModel, setSelectedModel] = useState(
+    localStorage.getItem('openrouter_selected_model') || MODEL_OPTIONS[0].id
+  );
+  
   const [messages, setMessages] = useState([
     { 
       from: 'assistant', 
@@ -123,7 +165,14 @@ export default function GeminiChat({ inline = false }) {
     setInput('');
 
     // Append initial assistant placeholder
-    const assistantPlaceholder = { from: 'assistant', text: '', streaming: true };
+    const assistantPlaceholder = { 
+      from: 'assistant', 
+      text: '', 
+      reasoning: '', 
+      usage: null, 
+      thinkingTime: 0,
+      streaming: true 
+    };
     setMessages(msgs => [...msgs, assistantPlaceholder]);
 
     const token = useAuthStore.getState().token || '';
@@ -133,14 +182,28 @@ export default function GeminiChat({ inline = false }) {
     const controller = new AbortController();
     abortControllerRef.current = controller;
 
+    // Start thinking timer
+    const startTime = Date.now();
+    const timerInterval = setInterval(() => {
+      setMessages(prev => {
+        const updated = [...prev];
+        const last = updated[updated.length - 1];
+        if (last && last.from === 'assistant' && last.streaming) {
+          const elapsed = Math.round((Date.now() - startTime) / 1000);
+          updated[updated.length - 1] = { ...last, thinkingTime: elapsed };
+        }
+        return updated;
+      });
+    }, 1000);
+
     try {
       // Gather chat history to maintain context (last 6 messages)
       const chatHistory = messages.map(m => ({
         role: m.from === 'user' ? 'user' : 'assistant',
-        content: m.text
+        content: m.text || ''
       }));
 
-      const resp = await fetch(`${baseUrl}/api/v1/ai/copilot/ask`, {
+      const resp = await fetch(`${baseUrl}/api/v1/ai/openrouter/ask`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -149,6 +212,8 @@ export default function GeminiChat({ inline = false }) {
         body: JSON.stringify({
           question: text,
           chat_history: chatHistory.slice(-6),
+          model: selectedModel,
+          use_rag: false,
         }),
         signal: controller.signal,
       });
@@ -173,6 +238,7 @@ export default function GeminiChat({ inline = false }) {
           if (!line.startsWith('data: ')) continue;
           const raw = line.slice(6).trim();
           if (raw === '[DONE]') {
+            clearInterval(timerInterval);
             setLoading(false);
             setMessages(prev => {
               const updated = [...prev];
@@ -186,12 +252,38 @@ export default function GeminiChat({ inline = false }) {
           }
           try {
             const parsed = JSON.parse(raw);
+            if (parsed.reasoning) {
+              setMessages(prev => {
+                const updated = [...prev];
+                const last = updated[updated.length - 1];
+                if (last && last.from === 'assistant') {
+                  updated[updated.length - 1] = { 
+                    ...last, 
+                    reasoning: (last.reasoning || '') + parsed.reasoning 
+                  };
+                }
+                return updated;
+              });
+            }
             if (parsed.text) {
               setMessages(prev => {
                 const updated = [...prev];
                 const last = updated[updated.length - 1];
                 if (last && last.from === 'assistant') {
-                  updated[updated.length - 1] = { ...last, text: last.text + parsed.text };
+                  updated[updated.length - 1] = { 
+                    ...last, 
+                    text: (last.text || '') + parsed.text 
+                  };
+                }
+                return updated;
+              });
+            }
+            if (parsed.usage) {
+              setMessages(prev => {
+                const updated = [...prev];
+                const last = updated[updated.length - 1];
+                if (last && last.from === 'assistant') {
+                  updated[updated.length - 1] = { ...last, usage: parsed.usage };
                 }
                 return updated;
               });
@@ -205,6 +297,7 @@ export default function GeminiChat({ inline = false }) {
         }
       }
     } catch (err) {
+      clearInterval(timerInterval);
       if (err.name === 'AbortError') return;
       setMessages(prev => {
         const updated = [...prev];
@@ -212,7 +305,7 @@ export default function GeminiChat({ inline = false }) {
         if (last && last.from === 'assistant') {
           updated[updated.length - 1] = { 
             ...last, 
-            text: last.text ? last.text : '⚠️ Sorry, I encountered an error connecting to the SPARK AI service. Please make sure Ollama/DeepSeek is running.',
+            text: last.text ? last.text : '⚠️ Sorry, I encountered an error connecting to the SPARK OpenRouter AI service.',
             streaming: false 
           };
         }
@@ -220,6 +313,7 @@ export default function GeminiChat({ inline = false }) {
       });
       setError(err.message || 'Stream failed');
     } finally {
+      clearInterval(timerInterval);
       setLoading(false);
       abortControllerRef.current = null;
     }
@@ -238,6 +332,12 @@ export default function GeminiChat({ inline = false }) {
         return updated;
       });
     }
+  };
+
+  const handleModelChange = (e) => {
+    const modelId = e.target.value;
+    setSelectedModel(modelId);
+    localStorage.setItem('openrouter_selected_model', modelId);
   };
 
   if (inline) {
@@ -271,6 +371,20 @@ export default function GeminiChat({ inline = false }) {
                 </div>
               </div>
             </div>
+
+            <div className="flex items-center gap-2">
+              <select
+                value={selectedModel}
+                onChange={handleModelChange}
+                className="text-[11px] font-bold bg-[#fbfaf7] dark:bg-[#0d1c24] border border-[#ecebe4] dark:border-[#24414e] rounded-lg px-2.5 py-1 text-[#cc5a37] outline-none max-w-[170px] truncate"
+              >
+                {MODEL_OPTIONS.map(opt => (
+                  <option key={opt.id} value={opt.id}>
+                    {opt.label}
+                  </option>
+                ))}
+              </select>
+            </div>
           </div>
 
           {/* Chat History & Welcome Suggested Prompts */}
@@ -281,7 +395,28 @@ export default function GeminiChat({ inline = false }) {
             <div className="max-w-4xl mx-auto w-full space-y-4">
               {messages.map((msg, i) => (
                 <Bubble key={i} from={msg.from}>
-                  <span className="whitespace-pre-wrap">{msg.text}</span>
+                  {msg.from === 'assistant' && (
+                    <ThinkingAccordion 
+                      reasoning={msg.reasoning} 
+                      elapsed={msg.thinkingTime} 
+                      isStreaming={msg.streaming && !msg.text} 
+                    />
+                  )}
+                  <span className="whitespace-pre-wrap">{msg.text || (msg.streaming && !msg.reasoning ? '...' : '')}</span>
+                  
+                  {msg.from === 'assistant' && msg.usage && (
+                    <div className="mt-2 flex flex-wrap gap-1.5 border-t border-border/10 pt-2.5">
+                      <span className="inline-flex items-center gap-1 rounded bg-[#ecebe4] dark:bg-[#1b3542] px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-widest text-[#888680] dark:text-[#9fb3bc]">
+                        ⚡ {msg.usage.total_tokens?.toLocaleString() || 0} tokens
+                      </span>
+                      {msg.usage.reasoning_tokens && (
+                        <span className="inline-flex items-center gap-1 rounded bg-violet-500/10 border border-violet-500/20 px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-widest text-violet-500 dark:text-violet-400">
+                          🧠 {msg.usage.reasoning_tokens?.toLocaleString() || 0} reasoning tokens
+                        </span>
+                      )}
+                    </div>
+                  )}
+
                   {msg.streaming && (
                     <span className="inline-block w-1.5 h-4 bg-[#cc5a37] ml-0.5 animate-pulse rounded-full align-middle" />
                   )}
@@ -366,8 +501,8 @@ export default function GeminiChat({ inline = false }) {
                     Reset Chat
                   </button>
                   
-                  <p className="text-[10px] text-[#888680] dark:text-[#9fb3bc]">
-                    DeepSeek-V3 Engine
+                  <p className="text-[10px] text-[#888680] dark:text-[#9fb3bc] font-medium">
+                    {MODEL_OPTIONS.find(m => m.id === selectedModel)?.label || 'OpenRouter Engine'}
                   </p>
                 </div>
               )}
@@ -415,13 +550,27 @@ export default function GeminiChat({ inline = false }) {
               </div>
             </div>
             
-            <button
-              aria-label="Close Chat"
-              onClick={() => setOpen(false)}
-              className="rounded-lg p-1.5 text-[#888680] dark:text-[#9fb3bc] hover:bg-[#f0ede4] dark:hover:bg-[#17303c] hover:text-[#191919] dark:hover:text-[#edf5f7] transition-all"
-            >
-              <X size={18} />
-            </button>
+            <div className="flex items-center gap-2">
+              <select
+                value={selectedModel}
+                onChange={handleModelChange}
+                className="text-[11px] font-bold bg-[#fbfaf7] dark:bg-[#0d1c24] border border-[#ecebe4] dark:border-[#24414e] rounded-lg px-2.5 py-1 text-[#cc5a37] outline-none max-w-[170px] truncate"
+              >
+                {MODEL_OPTIONS.map(opt => (
+                  <option key={opt.id} value={opt.id}>
+                    {opt.label}
+                  </option>
+                ))}
+              </select>
+
+              <button
+                aria-label="Close Chat"
+                onClick={() => setOpen(false)}
+                className="rounded-lg p-1.5 text-[#888680] dark:text-[#9fb3bc] hover:bg-[#f0ede4] dark:hover:bg-[#17303c] hover:text-[#191919] dark:hover:text-[#edf5f7] transition-all"
+              >
+                <X size={18} />
+              </button>
+            </div>
           </div>
 
           {/* Chat History & Welcome Suggested Prompts */}
@@ -431,7 +580,28 @@ export default function GeminiChat({ inline = false }) {
           >
             {messages.map((msg, i) => (
               <Bubble key={i} from={msg.from}>
-                <span className="whitespace-pre-wrap">{msg.text}</span>
+                {msg.from === 'assistant' && (
+                  <ThinkingAccordion 
+                    reasoning={msg.reasoning} 
+                    elapsed={msg.thinkingTime} 
+                    isStreaming={msg.streaming && !msg.text} 
+                  />
+                )}
+                <span className="whitespace-pre-wrap">{msg.text || (msg.streaming && !msg.reasoning ? '...' : '')}</span>
+                
+                {msg.from === 'assistant' && msg.usage && (
+                  <div className="mt-2 flex flex-wrap gap-1.5 border-t border-border/10 pt-2.5">
+                    <span className="inline-flex items-center gap-1 rounded bg-[#ecebe4] dark:bg-[#1b3542] px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-widest text-[#888680] dark:text-[#9fb3bc]">
+                      ⚡ {msg.usage.total_tokens?.toLocaleString() || 0} tokens
+                    </span>
+                    {msg.usage.reasoning_tokens && (
+                      <span className="inline-flex items-center gap-1 rounded bg-violet-500/10 border border-violet-500/20 px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-widest text-violet-500 dark:text-violet-400">
+                        🧠 {msg.usage.reasoning_tokens?.toLocaleString() || 0} reasoning tokens
+                      </span>
+                    )}
+                  </div>
+                )}
+
                 {msg.streaming && (
                   <span className="inline-block w-1.5 h-4 bg-[#cc5a37] ml-0.5 animate-pulse rounded-full align-middle" />
                 )}
@@ -514,8 +684,8 @@ export default function GeminiChat({ inline = false }) {
                   Reset Chat
                 </button>
                 
-                <p className="text-[10px] text-[#888680] dark:text-[#9fb3bc]">
-                  DeepSeek-V3 Engine
+                <p className="text-[10px] text-[#888680] dark:text-[#9fb3bc] font-medium">
+                  {MODEL_OPTIONS.find(m => m.id === selectedModel)?.label || 'OpenRouter Engine'}
                 </p>
               </div>
             )}
