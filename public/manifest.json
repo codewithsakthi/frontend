@@ -12,8 +12,8 @@
 
   "orientation": "portrait-primary",
 
-  "theme_color": "#6366f1",
-  "background_color": "#0f0f0f",
+  "theme_color": "#07141b",
+  "background_color": "#07141b",
 
   "lang": "en",
   "categories": ["education", "productivity"],
