@@ -20,6 +20,7 @@ import { mapAttendanceSummary, mapCurrentUser, mapStudentPerformance } from '../
 import NotificationBell from '../components/NotificationBell';
 import ASIEStudentDNA from '../components/ASIEStudentDNA';
 import ProfessionalProfilePage from '../features/professional-identity/pages/ProfessionalProfilePage';
+import AchievementsPanel from '../components/AchievementsPanel';
 
 // Redundant component definitions removed - imported from DashboardComponents
 
@@ -542,6 +543,10 @@ const Dashboard = () => {
 
       {activeTab === 'DNA' && (
         <ASIEStudentDNA rollNo={rollNo} />
+      )}
+
+      {activeTab === 'Achievements' && (
+        <AchievementsPanel />
       )}
 
       {activeTab === 'Professional' && (

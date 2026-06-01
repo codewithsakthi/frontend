@@ -1,7 +1,7 @@
 import { useEffect, useRef, useCallback, useState } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { useAuthStore } from '../store/authStore';
-import { API_BASE } from '../api/client';
+import api, { API_BASE } from '../api/client';
 
 /**
  * Universal real-time notification hook.
@@ -41,6 +41,47 @@ export const useNotifications = () => {
   const [unreadCount, setUnreadCount] = useState(0);
   const [isConnected, setIsConnected] = useState(false);
 
+  // Fetch persistent notifications on mount or when user credentials change
+  useEffect(() => {
+    if (!userId || !token) return;
+
+    const fetchPersistentNotifications = async () => {
+      try {
+        const dbNotifs = await api.get('achievements/notifications');
+        const mapped = dbNotifs.map(n => {
+          let type = 'announcement';
+          const title = n.title.toLowerCase();
+          if (
+            title.includes('achievement') || 
+            title.includes('publication') || 
+            title.includes('award') || 
+            title.includes('certification') ||
+            title.includes('journal') ||
+            title.includes('🏆') ||
+            title.includes('📄') ||
+            title.includes('📜') ||
+            title.includes('🌟')
+          ) {
+            type = 'achievement';
+          }
+          return {
+            id: n.id,
+            type,
+            title: n.title,
+            message: n.content,
+            timestamp: n.created_at,
+            read: n.status === 'read',
+          };
+        });
+
+        setNotifications(mapped.slice(0, MAX_NOTIFICATIONS));
+        setUnreadCount(mapped.filter(n => !n.read).length);
+      } catch (err) { /* ignore */ }
+    };
+
+    fetchPersistentNotifications();
+  }, [userId, token]);
+
   const ws = useRef(null);
   const currentUrl = useRef(null);
   const reconnectTimer = useRef(null);
@@ -65,6 +106,39 @@ export const useNotifications = () => {
 
       setNotifications(prev => [notif, ...prev].slice(0, MAX_NOTIFICATIONS));
       setUnreadCount(prev => prev + 1);
+
+      // Trigger Native Device Notification (Windows, iOS, Android)
+      if ('Notification' in window && Notification.permission === 'granted') {
+        const notifTitle = data.title || 'SPARK System Notification';
+        const notifOptions = {
+          body: data.message || '',
+          icon: '/icons/android/launchericon-192x192.png',
+          badge: '/icons/android/launchericon-192x192.png',
+          tag: notif.id,
+          requireInteraction: false,
+        };
+
+        try {
+          // 1. Desktop Browser approach (Windows/macOS standard)
+          const nativeNotif = new Notification(notifTitle, notifOptions);
+          nativeNotif.onclick = () => {
+            window.focus();
+            if (data.meta?.url) {
+              window.location.href = data.meta.url;
+            }
+          };
+        } catch (err) {
+          // 2. Mobile Browser approach (iOS PWA / Android) fallback via SW registration
+          if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.ready.then((reg) => {
+              reg.showNotification(notifTitle, {
+                ...notifOptions,
+                data: { url: data.meta?.url || '/' }
+              });
+            }).catch((swErr) => console.error('[Push Service] SW native notification fallback failed:', swErr));
+          }
+        }
+      }
 
       const keys = INVALIDATION_MAP[data.type] || [];
       keys.forEach(key => {
@@ -158,7 +232,13 @@ export const useNotifications = () => {
 
 
 
-  const markAllRead = useCallback(() => setUnreadCount(0), []);
+  const markAllRead = useCallback(async () => {
+    setUnreadCount(0);
+    try {
+      await api.post('achievements/notifications/mark-read');
+    } catch (err) { /* ignore */ }
+  }, []);
+
   const clearAll = useCallback(() => {
     setNotifications([]);
     setUnreadCount(0);

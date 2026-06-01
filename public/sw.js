@@ -87,6 +87,16 @@ self.addEventListener('fetch', (event) => {
   // Skip chrome-extension, browser-internal, etc.
   if (!url.protocol.startsWith('http')) return;
 
+  // For development (localhost), bypass static caching to ensure Hot Module Replacement (HMR) is unaffected
+  if (url.hostname === 'localhost' || url.hostname === '127.0.0.1') {
+    const isStaticAsset = /\.(js|css|png|jpg|jpeg|svg|gif|webp|woff|woff2|ttf|ico)$/.test(
+      url.pathname
+    );
+    if (isStaticAsset && !url.pathname.includes('/icons/')) {
+      return; // Fall through to network directly
+    }
+  }
+
   // ── Auth-sensitive API endpoints: Network only, never cache ──
   const isAuthEndpoint = NEVER_CACHE_PATTERNS.some((pattern) =>
     url.pathname.includes(pattern)
@@ -187,3 +197,41 @@ async function networkFirstWithApiCache(request) {
     );
   }
 }
+
+// ─── PWA Push Notifications background handlers ─────────────────────────────
+self.addEventListener('push', (event) => {
+  if (!event.data) return;
+  try {
+    const data = event.data.json();
+    event.waitUntil(
+      self.registration.showNotification(data.title || 'SPARK Celebration', {
+        body: data.message || '',
+        icon: '/icons/android/launchericon-192x192.png',
+        badge: '/icons/android/launchericon-192x192.png',
+        data: { url: data.url || '/' },
+        vibrate: [100, 50, 100],
+      })
+    );
+  } catch (err) {
+    console.error('[SW] Push Notification event error:', err);
+  }
+});
+
+self.addEventListener('notificationclick', (event) => {
+  event.notification.close();
+  event.waitUntil(
+    self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then((clientsList) => {
+      const targetUrl = event.notification.data?.url || '/';
+      // Find if we have an active client matching the target URL
+      for (const client of clientsList) {
+        if (client.url.includes(targetUrl) && 'focus' in client) {
+          return client.focus();
+        }
+      }
+      // If no active tab matching the URL, open a new window
+      if (self.clients.openWindow) {
+        return self.clients.openWindow(targetUrl);
+      }
+    })
+  );
+});

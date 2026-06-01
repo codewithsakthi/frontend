@@ -14,7 +14,8 @@ import {
   Activity,
   CalendarCheck,
   User,
-  Lock
+  Lock,
+  GraduationCap
 } from 'lucide-react';
 import { useSearchParams } from 'react-router-dom';
 import { useAuthStore } from '../store/authStore';
@@ -153,6 +154,7 @@ export default function Sidebar({ role = 'student', width, onResizeStart, isResi
             <>
               <NavGroup title="Overview">
                 <NavItem icon={LayoutDashboard} label="Command Center" href="?tab=Overview" isActive={activeTab === 'Overview'} />
+                <NavItem icon={Trophy} label="Achievements Feed" href="?tab=Achievements" isActive={activeTab === 'Achievements'} />
                 <NavItem icon={Zap} label="Claude AI Analyst" href="?tab=AI" isActive={activeTab === 'AI'} />
                 <NavItem icon={Target} label="AI Talent Matrix" href="?tab=ASIE" isActive={activeTab === 'ASIE'} />
                 <NavItem icon={ShieldAlert} label="Risk Radar" href="?tab=Risk" isActive={activeTab === 'Risk'} />
@@ -173,14 +175,17 @@ export default function Sidebar({ role = 'student', width, onResizeStart, isResi
                 <NavItem icon={Users} label="Student Directory" href="?tab=Students" isActive={activeTab === 'Students'} />
                 <NavItem icon={Users} label="Staff Management" href="?tab=Staff" isActive={activeTab === 'Staff'} />
                 <NavItem icon={Layers} label="Subject Management" href="?tab=Subjects" isActive={activeTab === 'Subjects'} />
+                <NavItem icon={GraduationCap} label="Syllabus Overview" href="?tab=Syllabus" isActive={activeTab === 'Syllabus'} />
               </NavGroup>
             </>
           ) : role === 'staff' ? (
             <>
               <NavGroup title="Portal">
                 <NavItem icon={LayoutDashboard} label="Faculty Hub" href="?tab=Overview" isActive={activeTab === 'Overview'} />
+                <NavItem icon={Trophy} label="Achievements Feed" href="?tab=Achievements" isActive={activeTab === 'Achievements'} />
                 <NavItem icon={CalendarCheck} label="Mark Attendance" href="?tab=Attendance" isActive={activeTab === 'Attendance'} />
                 <NavItem icon={Activity} label="Weekly Schedule" href="?tab=Schedule" isActive={activeTab === 'Schedule'} />
+                <NavItem icon={GraduationCap} label="Syllabus Tracker" href="?tab=Syllabus" isActive={activeTab === 'Syllabus'} />
               </NavGroup>
               <NavGroup title="Analytics">
                 <NavItem icon={BarChart2} label="Subject Performance" href="?tab=Performance" isActive={activeTab === 'Performance'} />
@@ -195,6 +200,7 @@ export default function Sidebar({ role = 'student', width, onResizeStart, isResi
             <>
               <NavGroup title="Academic">
                 <NavItem icon={LayoutDashboard} label="Overview" href="?tab=Overview" isActive={activeTab === 'Overview'} />
+                <NavItem icon={Trophy} label="Achievements Feed" href="?tab=Achievements" isActive={activeTab === 'Achievements'} />
                 <NavItem icon={Target} label="Student DNA" href="?tab=DNA" isActive={activeTab === 'DNA'} />
                 <NavItem icon={Zap} label="Performance" href="?tab=Performance" isActive={activeTab === 'Performance'} />
                 <NavItem icon={CalendarCheck} label="Attendance" href="?tab=Attendance" isActive={activeTab === 'Attendance'} />

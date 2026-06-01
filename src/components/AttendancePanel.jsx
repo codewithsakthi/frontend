@@ -206,7 +206,24 @@ export default function AttendancePanel({ subjects }) {
       const { draft, unresolved } = createDraftSelection(res?.parsed || {});
       setVoiceDraftSelection(draft);
       setVoiceDraftUnresolved(unresolved);
-      setVoiceNotice('Review suggestions and confirm before applying.');
+
+      // Automatically apply draft selections to active absentees and odList for immediate selection!
+      const absentFiltered = Object.entries(draft)
+        .filter(([, status]) => status === 'A')
+        .map(([roll]) => roll);
+      const odResolved = Object.entries(draft)
+        .filter(([, status]) => status === 'O')
+        .map(([roll]) => roll);
+
+      setAbsentees((prev) => [...new Set([...prev, ...absentFiltered])]);
+      setOdList((prev) => [...new Set([...prev, ...odResolved])]);
+
+      const unresolvedCount = (unresolved.absent || []).length + (unresolved.od || []).length;
+      const appliedNotice = `Automatically selected ${absentFiltered.length} absent and ${odResolved.length} OD student(s) based on your voice callout${unresolvedCount ? `, ${unresolvedCount} unresolved mention(s)` : ''}.`;
+      
+      setVoiceNotice(appliedNotice);
+      setConfirmationMsg(appliedNotice);
+      setShowConfirmation(true);
 
       // Auto-scroll to review
       setTimeout(() => {
@@ -222,6 +239,31 @@ export default function AttendancePanel({ subjects }) {
   const normalizeRoll = (value) => String(value || '').toLowerCase().replace(/[^a-z0-9]/g, '');
   const digitsOnly = (value) => String(value || '').replace(/\D/g, '');
   const normalizeText = (value) => String(value || '').toLowerCase().replace(/[^a-z0-9\s]/g, ' ').replace(/\s+/g, ' ').trim();
+
+  const levenshteinDistance = (s1, s2) => {
+    if (s1.length < s2.length) return levenshteinDistance(s2, s1);
+    if (s2.length === 0) return s1.length;
+
+    let previousRow = Array.from({ length: s2.length + 1 }, (_, i) => i);
+    for (let i = 0; i < s1.length; i++) {
+      let currentRow = [i + 1];
+      for (let j = 0; j < s2.length; j++) {
+        let insertions = previousRow[j + 1] + 1;
+        let deletions = currentRow[j] + 1;
+        let substitutions = previousRow[j] + (s1[i] !== s2[j] ? 1 : 0);
+        currentRow.push(Math.min(insertions, deletions, substitutions));
+      }
+      previousRow = currentRow;
+    }
+    return previousRow[s2.length];
+  };
+
+  const fuzzySimilarity = (s1, s2) => {
+    if (!s1 || !s2) return 0.0;
+    const dist = levenshteinDistance(s1, s2);
+    const maxLen = Math.max(s1.length, s2.length);
+    return 1.0 - dist / maxLen;
+  };
 
   const resolveMentionsToRolls = (items = []) => {
     const studentList = Array.isArray(students) ? students : [];
@@ -255,12 +297,48 @@ export default function AttendancePanel({ subjects }) {
       }
 
       const phrase = normalizeText(rawText);
+      
+      // 1) Direct substring check
       const byName = studentList.find((student) => {
         const name = normalizeText(student.name || '');
         return name && (phrase.includes(name) || name.includes(phrase));
       });
       if (byName?.roll_no) {
         resolved.push(String(byName.roll_no));
+        return;
+      }
+
+      // 2) Fuzzy / phonetic fallback for misspelled speech-to-text names
+      let bestMatch = null;
+      let bestScore = 0.0;
+
+      const candTokens = phrase.split(' ').filter(t => t.length > 2);
+
+      studentList.forEach((student) => {
+        const name = normalizeText(student.name || '');
+        if (!name) return;
+
+        const nameTokens = name.split(' ').filter(t => t.length > 2);
+
+        let bestTokenSim = 0.0;
+        candTokens.forEach((ct) => {
+          nameTokens.forEach((nt) => {
+            const sim = fuzzySimilarity(ct, nt);
+            if (sim > bestTokenSim) bestTokenSim = sim;
+          });
+        });
+
+        const wholeSim = fuzzySimilarity(phrase, name);
+        const matchScore = Math.max(bestTokenSim, wholeSim);
+
+        if (matchScore > bestScore) {
+          bestScore = matchScore;
+          bestMatch = student;
+        }
+      });
+
+      if (bestScore >= 0.70 && bestMatch) {
+        resolved.push(String(bestMatch.roll_no));
       } else {
         unresolved.push(rawText);
       }

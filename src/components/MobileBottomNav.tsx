@@ -7,7 +7,8 @@ import {
   Users,
   Activity,
   BarChart2,
-  Calendar
+  Calendar,
+  GraduationCap
 } from 'lucide-react';
 import { useLocation, useNavigate } from 'react-router-dom';
 
@@ -22,15 +23,16 @@ const ADMIN_ITEMS = [
 const STUDENT_ITEMS = [
   { label: 'Overview',   icon: LayoutDashboard, route: '/dashboard', tab: 'Overview' },
   { label: 'Attendance', icon: Calendar,        route: '/dashboard', tab: 'Attendance' },
-  { label: 'Analytics',  icon: BarChart2,       route: '/dashboard', tab: 'Performance' },
-  { label: 'Professional', icon: Trophy,        route: '/dashboard', tab: 'Professional' },
+  { label: 'Achievements', icon: Trophy,        route: '/dashboard', tab: 'Achievements' },
+  { label: 'Professional', icon: Target,        route: '/dashboard', tab: 'Professional' },
   { label: 'Profile',    icon: Activity,        route: '/dashboard', tab: 'Profile' },
 ];
 
 const STAFF_ITEMS = [
   { label: 'Overview',   icon: LayoutDashboard, route: '/staff', tab: 'Overview' },
-  { label: 'Schedule',   icon: Calendar,        route: '/staff', tab: 'Schedule' },
   { label: 'Attendance', icon: Users,           route: '/staff', tab: 'Attendance' },
+  { label: 'Syllabus',   icon: GraduationCap,   route: '/staff', tab: 'Syllabus' },
+  { label: 'Achievements', icon: Trophy,        route: '/staff', tab: 'Achievements' },
 ];
 
 interface MobileBottomNavProps {

@@ -3,6 +3,8 @@ import LeaderboardView from "../features/admin/views/LeaderboardView";
 import PlacementView from "../features/admin/views/PlacementView";
 import RiskRadarView from "../features/admin/views/RiskRadarView";
 import ASIEAdminDashboard from "../features/admin/views/ASIEAdminDashboard";
+import SyllabusHODView from "../features/admin/views/SyllabusHODView";
+import AchievementsPanel from "../components/AchievementsPanel";
 import { useSearchParams } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import {
@@ -3755,6 +3757,14 @@ export default function AdminDashboard() {
           studentBatchFilter={studentBatchFilter}
           studentSectionFilter={studentSectionFilter}
         />
+      )}
+
+      {activeTab === "Syllabus" && (
+        <SyllabusHODView />
+      )}
+
+      {activeTab === "Achievements" && (
+        <AchievementsPanel />
       )}
 
       <StudentProfile360 rollNo={selectedRollNo} onClose={handleCloseProfile} />

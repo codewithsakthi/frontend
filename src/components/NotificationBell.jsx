@@ -1,6 +1,13 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Bell, BellRing, X, Check, CheckCheck, Trash2, Wifi, WifiOff, Users, BookOpen, Megaphone } from 'lucide-react';
+import { Bell, BellRing, Trophy, X, Check, CheckCheck, Trash2, Wifi, WifiOff, Users, BookOpen, Megaphone, AlertTriangle } from 'lucide-react';
 import { useNotifications } from '../hooks/useNotifications';
+import {
+  isPushSupported,
+  getPermissionState,
+  getActiveSubscription,
+  subscribeUser,
+  unsubscribeUser
+} from '../services/pushNotification';
 
 const TYPE_CONFIG = {
   attendance_marked: {
@@ -26,6 +33,12 @@ const TYPE_CONFIG = {
     color: 'text-amber-600',
     bg: 'bg-amber-500/10',
     border: 'border-amber-500/20',
+  },
+  achievement: {
+    icon: Trophy,
+    color: 'text-rose-500',
+    bg: 'bg-rose-500/10',
+    border: 'border-rose-500/20',
   },
 };
 
@@ -67,6 +80,64 @@ export default function NotificationBell({ className = '' }) {
   const [open, setOpen] = useState(false);
   const panelRef = useRef(null);
   const bellRef = useRef(null);
+
+  // Native Push and OS Notifications States
+  const [pushSupported, setPushSupported] = useState(false);
+  const [pushEnabled, setPushEnabled] = useState(false);
+  const [pushPermission, setPushPermission] = useState('default');
+  const [isSubscribing, setIsSubscribing] = useState(false);
+  const [pushError, setPushError] = useState('');
+
+  // Check state on mount
+  useEffect(() => {
+    if (isPushSupported()) {
+      setPushSupported(true);
+      setPushPermission(getPermissionState());
+      getActiveSubscription().then(sub => {
+        setPushEnabled(!!sub);
+      });
+    }
+  }, []);
+
+  const handleEnablePush = async () => {
+    setIsSubscribing(true);
+    setPushError('');
+    try {
+      if (pushEnabled) {
+        await unsubscribeUser();
+        setPushEnabled(false);
+        setPushPermission(getPermissionState());
+      } else {
+        await subscribeUser();
+        setPushEnabled(true);
+        setPushPermission('granted');
+
+        // Fire a successful system notification confirmation!
+        if ('Notification' in window && Notification.permission === 'granted') {
+          const welcomeTitle = "System Notifications Active!";
+          const welcomeOptions = {
+            body: "Excellent! You will now receive system-level native banners on this device.",
+            icon: '/icons/android/launchericon-192x192.png',
+            badge: '/icons/android/launchericon-192x192.png'
+          };
+          try {
+            new Notification(welcomeTitle, welcomeOptions);
+          } catch (e) {
+            if ('serviceWorker' in navigator) {
+              navigator.serviceWorker.ready.then(reg => {
+                reg.showNotification(welcomeTitle, welcomeOptions);
+              });
+            }
+          }
+        }
+      }
+    } catch (err) {
+      console.error('[Push Setup Bell Error]:', err);
+      setPushError(err.message || 'Permission denied or failed.');
+    } finally {
+      setIsSubscribing(false);
+    }
+  };
 
   // Close on outside click
   useEffect(() => {
@@ -161,6 +232,38 @@ export default function NotificationBell({ className = '' }) {
               </button>
             </div>
           </div>
+
+          {/* Premium Native Push CTA Banner */}
+          {pushSupported && !pushEnabled && (
+            <div className="bg-gradient-to-r from-indigo-500/15 via-violet-500/10 to-transparent border-b border-border/60 p-3.5 flex flex-col gap-1.5 relative overflow-hidden">
+              <div className="absolute -right-6 -bottom-6 w-16 h-16 bg-indigo-500/10 rounded-full blur-xl pointer-events-none" />
+              <div className="flex items-center justify-between gap-3 z-10">
+                <div className="min-w-0">
+                  <h4 className="text-[11px] font-black text-indigo-500 uppercase tracking-widest flex items-center gap-1.5">
+                    <span className="w-1.5 h-1.5 rounded-full bg-indigo-500 animate-ping shrink-0" />
+                    Get OS Notifications
+                  </h4>
+                  <p className="text-[10px] text-muted-foreground mt-0.5 leading-normal">
+                    Receive native OS banners on Windows, iOS & Android even when offline.
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={handleEnablePush}
+                  disabled={isSubscribing}
+                  className="shrink-0 bg-indigo-600 hover:bg-indigo-700 text-white font-black text-[10px] uppercase tracking-widest py-1.5 px-3 rounded-lg shadow-md transition-all hover:scale-[1.02] active:scale-95 disabled:opacity-50 cursor-pointer"
+                >
+                  {isSubscribing ? 'Enabling...' : 'Enable'}
+                </button>
+              </div>
+              {pushError && (
+                <p className="text-[9px] text-rose-500 font-bold flex items-center gap-1 mt-0.5 z-10">
+                  <AlertTriangle size={10} />
+                  {pushError}
+                </p>
+              )}
+            </div>
+          )}
 
           {/* Notification List */}
           <div className="max-h-[420px] overflow-y-auto">

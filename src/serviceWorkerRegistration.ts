@@ -49,11 +49,6 @@ function registerValidSW(swUrl: string, config?: ServiceWorkerConfig) {
 }
 
 export function registerServiceWorker(config?: ServiceWorkerConfig) {
-  if (import.meta.env.DEV) {
-    // Do not register service worker in development to avoid caching issues.
-    return;
-  }
-
   if ('serviceWorker' in navigator) {
     const swUrl = `${import.meta.env.BASE_URL}sw.js`;
 

@@ -120,9 +120,6 @@ function App() {
                 <Route path="*" element={<Navigate to={isAuthenticated ? getRedirectPath() : '/login'} replace />} />
               </Routes>
             </Suspense>
-
-            {/* Floating Gemini Chat appears everywhere when authenticated (except for admin and student roles) */}
-            {isAuthenticated && userRole !== 'admin' && userRole !== 'student' && <GeminiChat />}
           </div>
         </Router>
       </ErrorBoundary>

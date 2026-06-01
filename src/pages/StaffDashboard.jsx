@@ -25,10 +25,14 @@ import SchedulePanel from '../components/SchedulePanel';
 import StaffPerformancePanel from '../components/StaffPerformancePanel';
 import StaffInsightsPanel from '../components/StaffInsightsPanel';
 import StudentProfile360 from '../components/StudentProfile360';
+import StaffProfessionalProfile from '../components/StaffProfessionalProfile';
+import SyllabusTrackingPanel from '../components/SyllabusTrackingPanel';
+import SyllabusHODView from '../features/admin/views/SyllabusHODView';
 import { SectionTitle } from '../components/DashboardComponents';
 import { useAuthStore } from '../store/authStore';
 import { mapStaffDashboard } from '../api/mappers';
 import NotificationBell from '../components/NotificationBell';
+import AchievementsPanel from '../components/AchievementsPanel';
 
 const StatCard = ({ label, value, hint, icon: Icon, trend }) => (
   <div className="metric-card group overflow-hidden relative">
@@ -104,6 +108,8 @@ export default function StaffDashboard() {
   const queryClient = useQueryClient();
   const { user, updateUser } = useAuthStore();
   const activeTab = searchParams.get('tab') || 'Overview';
+  const userRole = (user?.role?.name || user?.role || 'staff').toLowerCase();
+  const isHOD = ['hod', 'director'].includes(userRole);
 
   useEffect(() => {
     const tabFromUrl = searchParams.get('tab');
@@ -167,6 +173,7 @@ export default function StaffDashboard() {
               {activeTab === 'Overview' && "Manage your academic records, track student performance, and update internal assessment marks."}
               {activeTab === 'Attendance' && "Mark daily student attendance by listing absentees for your sessions."}
               {activeTab === 'Schedule' && "View your weekly academic schedule and timetable assignments."}
+              {activeTab === 'Syllabus' && (isHOD ? 'Department-wide syllabus coverage overview across all faculty.' : 'Track unit-wise syllabus coverage for your subjects.')}
             </p>
           </div>
 
@@ -298,58 +305,16 @@ export default function StaffDashboard() {
         <StaffInsightsPanel onOpenStudentProfile={setSelectedRollNo} />
       )}
 
+      {activeTab === 'Syllabus' && (
+        isHOD ? <SyllabusHODView /> : <SyllabusTrackingPanel />
+      )}
+
+      {activeTab === 'Achievements' && (
+        <AchievementsPanel />
+      )}
+
       {activeTab === 'Profile' && (
-        <div className="grid lg:grid-cols-3 gap-8 animate-in slide-in-from-bottom-4 duration-500">
-          <div className="lg:col-span-2 panel">
-            <SectionTitle title="Profile Information" copy="Update your public faculty profile and contact details." />
-            <form className="mt-8 space-y-6" onSubmit={(e) => {
-              e.preventDefault();
-              const formData = new FormData(e.currentTarget);
-              updateProfileMutation.mutate(Object.fromEntries(formData));
-            }}>
-              <div className="grid md:grid-cols-2 gap-6">
-                <div className="space-y-2">
-                  <label className="text-xs font-black uppercase tracking-widest text-muted-foreground">Full Name</label>
-                  <input name="name" className="input-field w-full" defaultValue={staff?.name || user?.name} required />
-                </div>
-                <div className="space-y-2">
-                  <label className="text-xs font-black uppercase tracking-widest text-muted-foreground">Email Address</label>
-                  <input name="email" type="email" className="input-field w-full" defaultValue={staff?.email || user?.email} />
-                </div>
-              </div>
-              <button
-                type="submit"
-                disabled={updateProfileMutation.isPending}
-                className="btn-primary w-fit group"
-              >
-                {updateProfileMutation.isPending ? <Loader2 className="animate-spin" size={18} /> : <Save size={18} />}
-                <span>Save Profile Changes</span>
-              </button>
-              {updateProfileMutation.isSuccess && (
-                <p className="text-emerald-500 text-sm font-bold animate-in fade-in slide-in-from-left-2 transition-all">
-                  Profile updated successfully.
-                </p>
-              )}
-            </form>
-          </div>
-          <div className="panel bg-primary/5 border-primary/10">
-            <SectionTitle title="Position Details" />
-            <div className="mt-8 space-y-4">
-              <div className="flex flex-col p-4 rounded-2xl bg-background/50 border border-border/40">
-                <span className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground mb-1">Employee ID</span>
-                <span className="text-lg font-bold">#{staff?.id || '—'}</span>
-              </div>
-              <div className="flex flex-col p-4 rounded-2xl bg-background/50 border border-border/40">
-                <span className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground mb-1">Department</span>
-                <span className="text-lg font-bold">{staff?.department || 'MCA Department'}</span>
-              </div>
-              <div className="flex flex-col p-4 rounded-2xl bg-background/50 border border-border/40">
-                <span className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground mb-1">Role Type</span>
-                <span className="text-lg font-bold uppercase">{user?.role || 'Staff'}</span>
-              </div>
-            </div>
-          </div>
-        </div>
+        <StaffProfessionalProfile />
       )}
 
       {activeTab === 'Security' && (
