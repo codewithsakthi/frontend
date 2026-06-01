@@ -1,11 +1,17 @@
-import React, { useMemo, useState } from 'react';
+import React, { useMemo, useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Eye, EyeOff, Lock, Loader2, User, GraduationCap, ShieldCheck, Sparkles } from 'lucide-react';
+import { Eye, EyeOff, Lock, Loader2, User, GraduationCap, ShieldCheck, Sparkles, Bell, AlertTriangle } from 'lucide-react';
 import ThemeToggle from '../components/ThemeToggle';
 import { useAuthStore } from '../store/authStore';
 import { useThemeStore } from '../store/themeStore';
 import api from '../api/client';
 import { mapAuthToken, mapCurrentUser } from '../api/mappers';
+import {
+  isPushSupported,
+  getPermissionState,
+  getSubscriptionLocal,
+  syncPendingSubscription
+} from '../services/pushNotification';
 
 const Login = () => {
   const [username, setUsername] = useState('');
@@ -18,6 +24,49 @@ const Login = () => {
   
   const { setAuth } = useAuthStore();
   const { theme, toggleTheme } = useThemeStore();
+
+  // Push Notification Prompt states
+  const [showBanner, setShowBanner] = useState(false);
+  const [notifLoading, setNotifLoading] = useState(false);
+  const [notifError, setNotifError] = useState('');
+
+  useEffect(() => {
+    // Show banner if push notifications are supported and permission has not been requested/granted yet
+    if (isPushSupported() && getPermissionState() === 'default') {
+      setShowBanner(true);
+    }
+  }, []);
+
+  const handleEnableNotification = async () => {
+    setNotifLoading(true);
+    setNotifError('');
+    try {
+      await getSubscriptionLocal();
+      setShowBanner(false);
+      // Success triggers immediate browser welcome notification
+      if ('Notification' in window && Notification.permission === 'granted') {
+        const title = "System Notifications Ready!";
+        const options = {
+          body: "Awesome! You will now receive system-level notifications when you access your dashboard.",
+          icon: '/icons/android/launchericon-192x192.png'
+        };
+        try {
+          new Notification(title, options);
+        } catch (e) {
+          if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.ready.then(reg => {
+              reg.showNotification(title, options);
+            });
+          }
+        }
+      }
+    } catch (err) {
+      console.error('[Landing Notif Error]:', err);
+      setNotifError(err.message || 'Permission request failed.');
+    } finally {
+      setNotifLoading(false);
+    }
+  };
 
   const usernameError = useMemo(() => {
     if (!username.trim()) return 'Roll number / Identifer is required.';
@@ -60,6 +109,9 @@ const Login = () => {
       
       setAuth(userData, tokenPayload.access_token, tokenPayload.refresh_token);
 
+      // Sync offline notification subscription if exists
+      await syncPendingSubscription();
+
       // Send people to the right workspace by role
       const roleLower = role?.toLowerCase();
       if (roleLower === 'admin') {
@@ -95,6 +147,59 @@ const Login = () => {
             <h1 className="text-4xl font-black tracking-tighter text-foreground mb-2">SPARK <span className="text-primary">Portal</span></h1>
             <p className="text-muted-foreground font-medium text-sm">Sign in to your high-speed academic command center.</p>
           </div>
+
+          {/* System Notification Permission Banner */}
+          {showBanner && (
+            <div className="mb-6 relative overflow-hidden rounded-3xl border border-primary/20 bg-gradient-to-r from-primary/10 via-violet-500/10 to-transparent p-5 backdrop-blur-md flex flex-col gap-3.5 transition-all duration-300 shadow-lg animate-in slide-in-from-top-4 duration-500">
+              <div className="absolute -left-10 -top-10 w-24 h-24 bg-primary/20 rounded-full blur-2xl pointer-events-none" />
+              <div className="flex items-start gap-3.5 relative z-10">
+                <div className="p-2.5 rounded-xl bg-primary/10 text-primary shrink-0 animate-pulse">
+                  <Bell className="w-5 h-5" />
+                </div>
+                <div className="min-w-0">
+                  <h3 className="text-sm font-black text-foreground uppercase tracking-wider flex items-center gap-2">
+                    Enable System Notifications
+                    <span className="inline-flex items-center rounded-full bg-emerald-500/10 px-2 py-0.5 text-[9px] font-black text-emerald-500 uppercase tracking-widest border border-emerald-500/20">
+                      NEW
+                    </span>
+                  </h3>
+                  <p className="text-xs text-muted-foreground mt-1 leading-normal">
+                    Receive native background system banners on Windows, iOS, and Android for real-time announcements, grades, and attendance updates!
+                  </p>
+                </div>
+              </div>
+              <div className="flex items-center justify-end gap-3 relative z-10 shrink-0">
+                <button
+                  type="button"
+                  onClick={() => setShowBanner(false)}
+                  className="text-xs font-black text-muted-foreground hover:text-foreground uppercase tracking-widest px-3 py-2 cursor-pointer"
+                >
+                  Dismiss
+                </button>
+                <button
+                  type="button"
+                  onClick={handleEnableNotification}
+                  disabled={notifLoading}
+                  className="flex items-center justify-center gap-2 py-2 px-4 text-xs font-black text-white bg-primary hover:bg-primary/90 hover:scale-[1.02] active:scale-95 shadow-md rounded-xl transition-all disabled:opacity-50 cursor-pointer"
+                >
+                  {notifLoading ? (
+                    <>
+                      <Loader2 className="animate-spin w-3.5 h-3.5" />
+                      Activating...
+                    </>
+                  ) : (
+                    'Activate OS Banners'
+                  )}
+                </button>
+              </div>
+              {notifError && (
+                <div className="text-[10px] text-rose-500 font-bold flex items-center gap-1 mt-1 z-10">
+                  <AlertTriangle size={12} />
+                  {notifError}
+                </div>
+              )}
+            </div>
+          )}
 
           <div className="bento-card relative z-10 backdrop-blur-2xl bg-card/70 border-white/10 shadow-2xl">
             <form onSubmit={handleLogin} className="space-y-6">

@@ -141,3 +141,52 @@ export async function resetPushService() {
   }
   return false;
 }
+
+/**
+ * Prompts user for notification permission, creates a push subscription locally,
+ * and saves it in localStorage (to be synced after login).
+ */
+export async function getSubscriptionLocal() {
+  if (!isPushSupported()) return null;
+
+  const permission = await Notification.requestPermission();
+  if (permission !== 'granted') {
+    throw new Error('Notification permission was denied.');
+  }
+
+  const registration = await navigator.serviceWorker.ready;
+  let subscription = await registration.pushManager.getSubscription();
+
+  if (!subscription) {
+    const response = await api.get('achievements/push/public-key');
+    const publicKey = response.public_key;
+    if (!publicKey) {
+      throw new Error('VAPID public key empty.');
+    }
+    const applicationServerKey = urlBase64ToUint8Array(publicKey);
+    subscription = await registration.pushManager.subscribe({
+      userVisibleOnly: true,
+      applicationServerKey: applicationServerKey
+    });
+  }
+
+  localStorage.setItem('pending_push_subscription', JSON.stringify(subscription.toJSON()));
+  return subscription;
+}
+
+/**
+ * Syncs any pending push subscriptions stored in localStorage with the backend.
+ */
+export async function syncPendingSubscription() {
+  try {
+    const pending = localStorage.getItem('pending_push_subscription');
+    if (pending) {
+      const subJson = JSON.parse(pending);
+      await api.post('achievements/push/subscribe', subJson);
+      localStorage.removeItem('pending_push_subscription');
+      console.log('[Push Service] Synced pending push subscription successfully.');
+    }
+  } catch (err) {
+    console.error('[Push Service] Failed to sync pending subscription:', err);
+  }
+}
