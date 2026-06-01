@@ -67,27 +67,32 @@ export async function subscribeUser() {
     throw new Error('Active Service Worker registration not found.');
   }
 
-  // 3. Check if subscription already exists
+  // 3. Purge existing subscription first to guarantee a fresh, valid registration with correct VAPID keys
   let subscription = await registration.pushManager.getSubscription();
-
-  // 4. If not registered, create new push subscription
-  if (!subscription) {
-    // Fetch base64url VAPID public key from backend
-    const response = await api.get('achievements/push/public-key');
-    const publicKey = response.public_key;
-    if (!publicKey) {
-      throw new Error('VAPID public key not found or returned empty by backend.');
+  if (subscription) {
+    try {
+      await subscription.unsubscribe();
+    } catch (e) {
+      console.warn('[Push Service] Failed to unsubscribe stale subscription:', e);
     }
-
-    // Convert standard base64url VAPID key to Uint8Array
-    const applicationServerKey = urlBase64ToUint8Array(publicKey);
-
-    // Subscribe via browser PushManager
-    subscription = await registration.pushManager.subscribe({
-      userVisibleOnly: true,
-      applicationServerKey: applicationServerKey
-    });
   }
+
+  // 4. Create fresh push subscription
+  // Fetch base64url VAPID public key from backend
+  const response = await api.get('achievements/push/public-key');
+  const publicKey = response.public_key;
+  if (!publicKey) {
+    throw new Error('VAPID public key not found or returned empty by backend.');
+  }
+
+  // Convert standard base64url VAPID key to Uint8Array
+  const applicationServerKey = urlBase64ToUint8Array(publicKey);
+
+  // Subscribe via browser PushManager
+  subscription = await registration.pushManager.subscribe({
+    userVisibleOnly: true,
+    applicationServerKey: applicationServerKey
+  });
 
   // 5. POST subscription details to backend (endpoint + p256dh + auth keys)
   const subJson = subscription.toJSON();
@@ -156,19 +161,24 @@ export async function getSubscriptionLocal() {
 
   const registration = await navigator.serviceWorker.ready;
   let subscription = await registration.pushManager.getSubscription();
-
-  if (!subscription) {
-    const response = await api.get('achievements/push/public-key');
-    const publicKey = response.public_key;
-    if (!publicKey) {
-      throw new Error('VAPID public key empty.');
+  if (subscription) {
+    try {
+      await subscription.unsubscribe();
+    } catch (e) {
+      console.warn('[Push Service] Failed to unsubscribe local stale subscription:', e);
     }
-    const applicationServerKey = urlBase64ToUint8Array(publicKey);
-    subscription = await registration.pushManager.subscribe({
-      userVisibleOnly: true,
-      applicationServerKey: applicationServerKey
-    });
   }
+
+  const response = await api.get('achievements/push/public-key');
+  const publicKey = response.public_key;
+  if (!publicKey) {
+    throw new Error('VAPID public key empty.');
+  }
+  const applicationServerKey = urlBase64ToUint8Array(publicKey);
+  subscription = await registration.pushManager.subscribe({
+    userVisibleOnly: true,
+    applicationServerKey: applicationServerKey
+  });
 
   localStorage.setItem('pending_push_subscription', JSON.stringify(subscription.toJSON()));
   return subscription;
