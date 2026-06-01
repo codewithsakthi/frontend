@@ -200,21 +200,33 @@ async function networkFirstWithApiCache(request) {
 
 // ─── PWA Push Notifications background handlers ─────────────────────────────
 self.addEventListener('push', (event) => {
-  if (!event.data) return;
-  try {
-    const data = event.data.json();
-    event.waitUntil(
-      self.registration.showNotification(data.title || 'SPARK Celebration', {
-        body: data.message || '',
-        icon: '/icons/android/launchericon-192x192.png',
-        badge: '/icons/android/launchericon-192x192.png',
-        data: { url: data.url || '/' },
-        vibrate: [100, 50, 100],
-      })
-    );
-  } catch (err) {
-    console.error('[SW] Push Notification event error:', err);
+  let title = 'SPARK System Notification';
+  let body = '';
+  let url = '/';
+  
+  if (event.data) {
+    try {
+      const data = event.data.json();
+      title = data.title || title;
+      body = data.message || data.body || '';
+      url = data.url || '/';
+    } catch (err) {
+      // Fallback if data is not JSON (plain text payload)
+      body = event.data.text();
+    }
+  } else {
+    body = 'You have a new update from SPARK.';
   }
+  
+  event.waitUntil(
+    self.registration.showNotification(title, {
+      body: body,
+      icon: '/icons/android/launchericon-192x192.png',
+      badge: '/icons/android/launchericon-192x192.png',
+      data: { url: url },
+      vibrate: [100, 50, 100],
+    })
+  );
 });
 
 self.addEventListener('notificationclick', (event) => {

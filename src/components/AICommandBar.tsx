@@ -1,12 +1,12 @@
 /**
  * AICommandBar.tsx
  * ─────────────────
- * Global Ctrl+K / ⌘+K AI Command Bar powered by DeepSeek-V3.
+ * Global Ctrl+K / ⌘+K AI Command Bar powered by SPARK AI.
  * Natural-language interface over the SPARK dashboard APIs.
  *
  * Features:
  *  • Slash commands: /risk, /placement, /leaderboard, /faculty
- *  • Free-form NL queries streamed from DeepSeek-V3.
+ *  • Free-form NL queries streamed from SPARK AI.
  *  • Intent recognition → executes matching API call
  *  • Keyboard-driven (arrows, enter, escape)
  *  • Premium glassmorphism design with fluid animations
@@ -297,7 +297,7 @@ export default function AICommandBar({ dashboardContext = '', onNavigate }: Comm
 
           <div className="flex items-center gap-2 flex-shrink-0">
             <span className="text-[10px] font-black uppercase tracking-widest text-violet-400/60 bg-violet-500/10 border border-violet-500/15 px-1.5 py-0.5 rounded-lg">
-              DeepSeek-V3
+              SPARK AI
             </span>
             <button
               type="button"
@@ -342,7 +342,7 @@ export default function AICommandBar({ dashboardContext = '', onNavigate }: Comm
             {suggestions.length === 0 && (
               <div className="px-4 py-3 text-sm text-muted-foreground flex items-center gap-2">
                 <Search size={13} />
-                Press Enter to ask DeepSeek-V3: &ldquo;{query}&rdquo;
+                Press Enter to ask SPARK AI: &ldquo;{query}&rdquo;
               </div>
             )}
             {suggestions.map((s, i) => (
@@ -382,7 +382,7 @@ export default function AICommandBar({ dashboardContext = '', onNavigate }: Comm
                 </div>
                 <div className="flex-1">
                   <p className="text-sm font-semibold text-foreground">Ask AI: &ldquo;{query}&rdquo;</p>
-                  <p className="text-xs text-muted-foreground">Stream answer from DeepSeek-V3</p>
+                  <p className="text-xs text-muted-foreground">Stream answer from SPARK AI</p>
                 </div>
                 <kbd className="text-[10px] font-mono text-muted-foreground bg-muted/60 border border-border/40 px-1.5 py-0.5 rounded-md flex-shrink-0">
                   ↵

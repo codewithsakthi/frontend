@@ -37,6 +37,8 @@ export default function AchievementsPanel() {
   const [filterType, setFilterType] = useState('all');
   const [isMyOnly, setIsMyOnly] = useState(false);
   const [showAddModal, setShowAddModal] = useState(false);
+  const [selectedItem, setSelectedItem] = useState(null);
+
 
   // Push notifications state
   const [isPushEnabled, setIsPushEnabled] = useState(false);
@@ -350,44 +352,45 @@ export default function AchievementsPanel() {
           </div>
         </div>
       ) : (
-        <div className="grid gap-4 md:grid-cols-2">
+        <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
           {filteredFeed.map((item) => {
             const details = TYPE_DETAILS[item.achievement_type] || TYPE_DETAILS.achievement;
             const Icon = details.icon;
             const isOwner = item.user_id === user?.id;
 
             return (
-              <div
+              <button
                 key={item.id}
-                className="panel flex flex-col p-5 border border-border/40 hover:border-primary/20 hover:shadow-md transition-all duration-300 group hover:scale-[1.005] bg-card"
+                type="button"
+                onClick={() => setSelectedItem(item)}
+                className="panel flex flex-col p-5 border border-border/40 hover:border-primary/40 hover:shadow-lg transition-all duration-300 group hover:scale-[1.015] bg-card text-left w-full rounded-2xl cursor-pointer"
               >
                 {/* Creator Header */}
                 <div className="flex items-start justify-between gap-3">
                   <div className="flex items-center gap-3">
-                    {/* User profile pic */}
                     {item.user_profile_photo ? (
                       <img
                         src={`${api.defaults.baseURL.replace(/\/$/, '')}${item.user_profile_photo}`}
                         alt={item.user_name}
-                        className="w-10 h-10 rounded-full object-cover border border-border"
+                        className="w-10 h-10 rounded-full object-cover border border-border shrink-0"
                         onError={(e) => {
                           e.target.src = 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=80&fit=crop&q=80';
                         }}
                       />
                     ) : (
-                      <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center text-primary font-black uppercase text-sm">
+                      <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center text-primary font-black uppercase text-sm shrink-0">
                         {item.user_name.slice(0, 2)}
                       </div>
                     )}
-                    <div>
-                      <p className="font-bold text-foreground leading-tight">{item.user_name}</p>
+                    <div className="min-w-0">
+                      <p className="font-bold text-foreground leading-tight truncate">{item.user_name}</p>
                       <p className="text-[10px] uppercase font-black tracking-widest text-muted-foreground mt-0.5">
                         {item.user_role}
                       </p>
                     </div>
                   </div>
 
-                  <span className={`text-[10px] font-black uppercase tracking-widest px-2.5 py-1 rounded-full border flex items-center gap-1 ${details.color}`}>
+                  <span className={`text-[10px] font-black uppercase tracking-widest px-2.5 py-1 rounded-full border flex items-center gap-1 shrink-0 ${details.color}`}>
                     <Icon size={10} />
                     {details.label}
                   </span>
@@ -399,7 +402,7 @@ export default function AchievementsPanel() {
                     {item.title}
                   </h3>
                   {item.description && (
-                    <p className="text-xs text-muted-foreground leading-relaxed mt-2 whitespace-pre-line break-words">
+                    <p className="text-xs text-muted-foreground leading-relaxed mt-2 line-clamp-3 break-words">
                       {item.description}
                     </p>
                   )}
@@ -414,37 +417,166 @@ export default function AchievementsPanel() {
 
                   <div className="flex items-center gap-2">
                     {item.attachment_url && (
-                      <a
-                        href={`${api.defaults.baseURL.replace(/\/$/, '')}${item.attachment_url}`}
-                        target="_blank"
-                        rel="noreferrer"
-                        className="flex items-center gap-1 py-1 px-2.5 rounded-lg bg-muted hover:bg-primary/10 hover:text-primary transition-all font-semibold"
-                      >
+                      <span className="flex items-center gap-1 py-1 px-2.5 rounded-lg bg-muted font-semibold">
                         <Eye size={12} />
-                        View Proof
-                      </a>
+                        Has Proof
+                      </span>
                     )}
-
-                    {(isOwner || user?.role_name?.lower() === 'admin') && (
-                      <button
-                        onClick={() => {
-                          if (confirm('Are you sure you want to delete this achievement?')) {
-                            deleteMutation.mutate(item.id);
-                          }
-                        }}
-                        className="p-1.5 rounded-lg hover:bg-rose-500/10 text-muted-foreground hover:text-rose-500 transition-colors"
-                        title="Delete achievement"
-                      >
-                        <Trash2 size={13} />
-                      </button>
-                    )}
+                    <span className="text-[10px] text-primary/70 opacity-0 group-hover:opacity-100 transition-opacity">
+                      View details →
+                    </span>
                   </div>
                 </div>
-              </div>
+              </button>
             );
           })}
         </div>
       )}
+
+      {/* Achievement Detail Modal */}
+      {selectedItem && (() => {
+        const item = selectedItem;
+        const details = TYPE_DETAILS[item.achievement_type] || TYPE_DETAILS.achievement;
+        const Icon = details.icon;
+        const isOwner = item.user_id === user?.id;
+        const typeInsights = {
+          journal: 'Peer-reviewed academic publications contribute to the institution\'s research impact score and faculty KPIs.',
+          publication: 'Peer-reviewed academic publications contribute to the institution\'s research impact score and faculty KPIs.',
+          award: 'Awards and honors reflect excellence recognized by external bodies, boosting institutional prestige.',
+          certification: 'Professional certifications validate domain expertise and strengthen placement and industry readiness.',
+          achievement: 'General achievements celebrate milestones that inspire the campus community and build a culture of excellence.',
+        };
+        return (
+          <div
+            className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/60 backdrop-blur-sm p-0 sm:p-4"
+            onClick={(e) => e.target === e.currentTarget && setSelectedItem(null)}
+          >
+            <div className="relative w-full sm:max-w-xl bg-background border border-border rounded-t-3xl sm:rounded-2xl shadow-2xl overflow-hidden max-h-[92vh] flex flex-col">
+              {/* Colored header */}
+              <div className={`px-5 py-5 flex items-start justify-between gap-4 shrink-0 ${
+                item.achievement_type === 'award' ? 'bg-gradient-to-r from-rose-600 to-rose-500' :
+                item.achievement_type === 'certification' ? 'bg-gradient-to-r from-emerald-600 to-emerald-500' :
+                item.achievement_type === 'journal' || item.achievement_type === 'publication' ? 'bg-gradient-to-r from-sky-600 to-sky-500' :
+                'bg-gradient-to-r from-amber-600 to-amber-500'
+              }`}>
+                <div className="flex items-center gap-3">
+                  <div className="rounded-xl bg-white/15 p-2.5 shrink-0">
+                    <Icon size={22} className="text-white" />
+                  </div>
+                  <div>
+                    <p className="text-[10px] font-black uppercase tracking-[0.2em] text-white/70">{details.label}</p>
+                    <h2 className="text-lg font-bold text-white leading-tight">{item.title}</h2>
+                  </div>
+                </div>
+                <button
+                  onClick={() => setSelectedItem(null)}
+                  className="rounded-lg p-1.5 text-white/70 hover:text-white hover:bg-white/10 transition-colors shrink-0 mt-0.5"
+                >
+                  <X size={18} />
+                </button>
+              </div>
+
+              {/* Scrollable body */}
+              <div className="overflow-y-auto flex-1 p-5 space-y-5">
+                {/* Author */}
+                <div className="flex items-center gap-3 p-4 rounded-xl bg-muted/20 border border-border/50">
+                  {item.user_profile_photo ? (
+                    <img
+                      src={`${api.defaults.baseURL.replace(/\/$/, '')}${item.user_profile_photo}`}
+                      alt={item.user_name}
+                      className="w-12 h-12 rounded-full object-cover border border-border shrink-0"
+                      onError={(e) => { e.target.src = 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=80&fit=crop&q=80'; }}
+                    />
+                  ) : (
+                    <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center text-primary font-black uppercase shrink-0">
+                      {item.user_name.slice(0, 2)}
+                    </div>
+                  )}
+                  <div>
+                    <p className="font-bold text-foreground">{item.user_name}</p>
+                    <p className="text-xs uppercase tracking-widest font-black text-muted-foreground mt-0.5">{item.user_role}</p>
+                  </div>
+                  {item.date_achieved && (
+                    <div className="ml-auto flex items-center gap-1.5 text-xs text-muted-foreground font-medium">
+                      <Calendar size={13} />
+                      {formatDisplayDate(item.date_achieved)}
+                    </div>
+                  )}
+                </div>
+
+                {/* Description */}
+                {item.description && (
+                  <div className="space-y-2">
+                    <p className="text-[10px] font-black uppercase tracking-[0.18em] text-muted-foreground">Description</p>
+                    <div className="p-4 rounded-xl bg-muted/20 border border-border/50">
+                      <p className="text-sm text-foreground leading-relaxed whitespace-pre-line">{item.description}</p>
+                    </div>
+                  </div>
+                )}
+
+                {/* Insight */}
+                <div className="space-y-2">
+                  <p className="text-[10px] font-black uppercase tracking-[0.18em] text-muted-foreground">Why This Matters</p>
+                  <div className="flex items-start gap-2.5 p-3 rounded-xl bg-amber-500/5 border border-amber-500/20">
+                    <Trophy size={14} className="text-amber-500 mt-0.5 shrink-0" />
+                    <p className="text-sm text-foreground">{typeInsights[item.achievement_type] || typeInsights.achievement}</p>
+                  </div>
+                </div>
+
+                {/* Attachment */}
+                {item.attachment_url && (
+                  <div className="space-y-2">
+                    <p className="text-[10px] font-black uppercase tracking-[0.18em] text-muted-foreground">Proof / Attachment</p>
+                    <a
+                      href={`${api.defaults.baseURL.replace(/\/$/, '')}${item.attachment_url}`}
+                      target="_blank"
+                      rel="noreferrer"
+                      onClick={(e) => e.stopPropagation()}
+                      className="flex items-center gap-2.5 p-3.5 rounded-xl border border-primary/30 bg-primary/5 hover:bg-primary/10 transition-colors group/link"
+                    >
+                      <div className="rounded-lg bg-primary/10 p-2 shrink-0">
+                        <Eye size={16} className="text-primary" />
+                      </div>
+                      <div>
+                        <p className="text-sm font-semibold text-primary">View Proof Document</p>
+                        <p className="text-[10px] text-muted-foreground">Opens in new tab</p>
+                      </div>
+                      <Download size={14} className="ml-auto text-primary/60 group-hover/link:text-primary transition-colors" />
+                    </a>
+                  </div>
+                )}
+              </div>
+
+              {/* Footer */}
+              <div className="px-5 py-3 border-t border-border/50 flex items-center justify-between shrink-0">
+                <div className="flex items-center gap-2">
+                  {(isOwner || user?.role_name === 'admin') && (
+                    <button
+                      onClick={() => {
+                        if (confirm('Are you sure you want to delete this achievement?')) {
+                          deleteMutation.mutate(item.id);
+                          setSelectedItem(null);
+                        }
+                      }}
+                      className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg text-rose-500 hover:bg-rose-500/10 transition-colors"
+                    >
+                      <Trash2 size={13} />
+                      Delete
+                    </button>
+                  )}
+                </div>
+                <button
+                  onClick={() => setSelectedItem(null)}
+                  className="px-4 py-2 text-sm font-semibold bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-colors"
+                >
+                  Close
+                </button>
+              </div>
+            </div>
+          </div>
+        );
+      })()}
+
 
       {/* Add Achievement Modal */}
       {showAddModal && (

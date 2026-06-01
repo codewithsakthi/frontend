@@ -29,12 +29,16 @@ export default function MarksEntry({ subject, onClose }) {
     }
   }, [students, subject]);
 
+  const [showSuccess, setShowSuccess] = useState(false);
+
   const mutation = useMutation({
     mutationFn: (updates) => api.patch('staff/marks', updates),
     onSuccess: () => {
-      queryClient.invalidateQueries(['staff-subject-students', subject.subject_id]);
+      queryClient.invalidateQueries(['staff-subject-marks', subject.subject_id]);
+      queryClient.invalidateQueries(['staff-me']);
       setIsDirty(false);
-      // Optional: show success toast
+      setShowSuccess(true);
+      setTimeout(() => setShowSuccess(false), 3000);
     },
   });
 
@@ -97,7 +101,12 @@ export default function MarksEntry({ subject, onClose }) {
             <p className="text-sm text-muted-foreground">{subject.course_code} | Semester {subject.semester} | Section {subject.section || 'A'}</p>
           </div>
           <div className="flex items-center gap-3">
-            {isDirty && (
+            {showSuccess && (
+              <span className="text-xs font-semibold text-emerald-500 flex items-center gap-1 animate-in fade-in duration-300">
+                <CheckCircle2 size={14} /> Marks Saved Successfully
+              </span>
+            )}
+            {isDirty && !showSuccess && (
               <span className="text-xs font-semibold text-amber-500 flex items-center gap-1">
                 <AlertCircle size={14} /> Unsaved Changes
               </span>

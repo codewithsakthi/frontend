@@ -48,6 +48,16 @@ import {
   Edit,
   Settings,
   X,
+  Info,
+  TrendingUp,
+  TrendingDown,
+  Minus,
+  BookOpen,
+  BarChart2,
+  CheckCircle2,
+  XCircle,
+  Clock,
+  Code2,
 } from "lucide-react";
 import api from "../api/client";
 import { useAuthStore } from "../store/authStore";
@@ -56,7 +66,6 @@ import StudentProfile360 from "../components/StudentProfile360";
 import GeminiChat from "../components/GeminiChat";
 import RAGChat from "../components/RAGChat";
 import { validatePassThreshold } from "../utils/performanceUtils";
-import AICopilot from "../components/AICopilot";
 import NotificationBell from "../components/NotificationBell";
 import { isGradedSubject } from "../utils/subjectFilters";
 import type {
@@ -124,23 +133,193 @@ function Metric({
   label,
   value,
   hint,
+  onClick,
+  trend,
+  trendLabel,
+  color,
+  icon: Icon,
 }: {
   label: string;
   value: string;
   hint: string;
+  onClick?: () => void;
+  trend?: "up" | "down" | "neutral";
+  trendLabel?: string;
+  color?: "emerald" | "rose" | "amber" | "blue" | "primary";
+  icon?: React.ElementType;
 }) {
-  return (
-    <article className="metric-card">
-      <p className="text-[11px] font-black uppercase tracking-[0.18em] text-muted-foreground">
-        {label}
-      </p>
+  const colorMap = {
+    emerald: "text-emerald-500",
+    rose: "text-rose-500",
+    amber: "text-amber-500",
+    blue: "text-blue-500",
+    primary: "text-primary",
+  };
+  const valueColor = color ? colorMap[color] : "text-foreground";
+  const TrendIcon = trend === "up" ? TrendingUp : trend === "down" ? TrendingDown : Minus;
+  const trendColor = trend === "up" ? "text-emerald-500" : trend === "down" ? "text-rose-500" : "text-muted-foreground";
 
-      <p className="mt-4 text-4xl font-semibold tracking-tight text-foreground">
+  return (
+    <article
+      className={`metric-card relative group transition-all duration-200 ${
+        onClick ? "cursor-pointer hover:ring-2 hover:ring-primary/40 hover:shadow-lg hover:-translate-y-0.5" : ""
+      }`}
+      onClick={onClick}
+      role={onClick ? "button" : undefined}
+      tabIndex={onClick ? 0 : undefined}
+      onKeyDown={onClick ? (e) => e.key === "Enter" && onClick() : undefined}
+    >
+      {onClick && (
+        <span className="absolute top-3 right-3 opacity-0 group-hover:opacity-100 transition-opacity">
+          <Info size={14} className="text-primary" />
+        </span>
+      )}
+      <div className="flex items-center gap-2">
+        {Icon && <Icon size={14} className={`shrink-0 ${color ? colorMap[color] : "text-muted-foreground"}`} />}
+        <p className="text-[11px] font-black uppercase tracking-[0.18em] text-muted-foreground">
+          {label}
+        </p>
+      </div>
+
+      <p className={`mt-4 text-4xl font-semibold tracking-tight ${valueColor}`}>
         {value}
       </p>
 
-      <p className="mt-2 text-sm text-muted-foreground">{hint}</p>
+      <div className="mt-2 flex items-center gap-1.5">
+        {trend && trendLabel && (
+          <span className={`flex items-center gap-0.5 text-xs font-semibold ${trendColor}`}>
+            <TrendIcon size={12} />
+            {trendLabel}
+          </span>
+        )}
+        <p className="text-sm text-muted-foreground">{hint}</p>
+      </div>
+      {onClick && (
+        <p className="mt-2 text-[10px] font-semibold uppercase tracking-widest text-primary/60 opacity-0 group-hover:opacity-100 transition-opacity">
+          Click to see reasoning →
+        </p>
+      )}
     </article>
+  );
+}
+
+// ─── Metric Drill-Down Modal ──────────────────────────────────────────────────
+type MetricDetail = {
+  title: string;
+  value: string;
+  icon: React.ElementType;
+  color: string;
+  summary: string;
+  formula?: string;
+  sources: { label: string; value: string; note?: string; status?: "good" | "warn" | "bad" | "neutral" }[];
+  insights?: string[];
+  rawData?: { label: string; value: string }[];
+};
+
+function MetricDrillDownModal({
+  detail,
+  onClose,
+}: {
+  detail: MetricDetail | null;
+  onClose: () => void;
+}) {
+  if (!detail) return null;
+  const Icon = detail.icon;
+  const statusIcon = (s?: "good" | "warn" | "bad" | "neutral") => {
+    if (s === "good") return <CheckCircle2 size={13} className="text-emerald-500 shrink-0" />;
+    if (s === "bad") return <XCircle size={13} className="text-rose-500 shrink-0" />;
+    if (s === "warn") return <AlertTriangle size={13} className="text-amber-500 shrink-0" />;
+    return <Minus size={13} className="text-muted-foreground shrink-0" />;
+  };
+
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm"
+      onClick={(e) => e.target === e.currentTarget && onClose()}
+    >
+      <div className="relative w-full max-w-lg bg-background border border-border rounded-2xl shadow-2xl overflow-hidden">
+        {/* Header */}
+        <div className={`px-6 py-5 ${detail.color} flex items-start justify-between gap-4`}>
+          <div className="flex items-center gap-3">
+            <div className="rounded-xl bg-white/10 p-2.5">
+              <Icon size={22} className="text-white" />
+            </div>
+            <div>
+              <p className="text-[10px] font-black uppercase tracking-[0.22em] text-white/70">Metric Breakdown</p>
+              <h2 className="text-xl font-bold text-white leading-tight">{detail.title}</h2>
+            </div>
+          </div>
+          <button
+            onClick={onClose}
+            className="mt-0.5 rounded-lg p-1.5 text-white/70 hover:text-white hover:bg-white/10 transition-colors"
+          >
+            <X size={18} />
+          </button>
+        </div>
+
+        {/* Body */}
+        <div className="p-6 space-y-5 max-h-[70vh] overflow-y-auto">
+          {/* Current value hero */}
+          <div className="flex items-center gap-4 p-4 rounded-xl bg-muted/20 border border-border/50">
+            <p className="text-5xl font-bold text-foreground tracking-tight">{detail.value}</p>
+            <p className="text-sm text-muted-foreground leading-relaxed">{detail.summary}</p>
+          </div>
+
+          {/* Formula */}
+          {detail.formula && (
+            <div className="rounded-xl bg-primary/5 border border-primary/20 p-4">
+              <p className="text-[10px] font-black uppercase tracking-[0.18em] text-primary mb-2">How It's Calculated</p>
+              <code className="text-sm text-foreground font-mono">{detail.formula}</code>
+            </div>
+          )}
+
+          {/* Source data */}
+          <div>
+            <p className="text-[10px] font-black uppercase tracking-[0.18em] text-muted-foreground mb-3">Source Signals</p>
+            <div className="space-y-2">
+              {detail.sources.map((src, i) => (
+                <div key={i} className="flex items-center justify-between gap-3 p-3 rounded-lg bg-muted/10 border border-border/40">
+                  <div className="flex items-center gap-2 min-w-0">
+                    {statusIcon(src.status)}
+                    <div className="min-w-0">
+                      <p className="text-sm font-medium text-foreground truncate">{src.label}</p>
+                      {src.note && <p className="text-xs text-muted-foreground">{src.note}</p>}
+                    </div>
+                  </div>
+                  <p className="text-sm font-bold text-foreground shrink-0">{src.value}</p>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Insights */}
+          {detail.insights && detail.insights.length > 0 && (
+            <div>
+              <p className="text-[10px] font-black uppercase tracking-[0.18em] text-muted-foreground mb-3">AI Insights</p>
+              <div className="space-y-2">
+                {detail.insights.map((insight, i) => (
+                  <div key={i} className="flex items-start gap-2 p-3 rounded-lg bg-amber-500/5 border border-amber-500/20">
+                    <Zap size={13} className="text-amber-500 mt-0.5 shrink-0" />
+                    <p className="text-sm text-foreground">{insight}</p>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* Footer */}
+        <div className="px-6 py-4 border-t border-border/50 flex items-center justify-between">
+          <p className="text-xs text-muted-foreground">Data refreshed from live database</p>
+          <button
+            onClick={onClose}
+            className="px-4 py-2 text-sm font-semibold bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-colors"
+          >
+            Close
+          </button>
+        </div>
+      </div>
+    </div>
   );
 }
 
@@ -200,7 +379,62 @@ function StudentStrip({
   );
 }
 
+// ─── Generic Drill-Down Modal ─────────────────────────────────────────────────
+function GenericDrillDownModal({
+  isOpen,
+  onClose,
+  title,
+  subtitle,
+  headerColor,
+  icon: Icon,
+  children,
+}: {
+  isOpen: boolean;
+  onClose: () => void;
+  title: string;
+  subtitle?: string;
+  headerColor: string;
+  icon: React.ElementType;
+  children: React.ReactNode;
+}) {
+  if (!isOpen) return null;
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 bg-black/60 backdrop-blur-sm"
+      onClick={(e) => e.target === e.currentTarget && onClose()}
+    >
+      <div className="relative w-full sm:max-w-lg bg-background border border-border rounded-t-2xl sm:rounded-2xl shadow-2xl overflow-hidden max-h-[90vh] flex flex-col">
+        {/* Header */}
+        <div className={`px-5 py-4 ${headerColor} flex items-start justify-between gap-4 shrink-0`}>
+          <div className="flex items-center gap-3">
+            <div className="rounded-xl bg-white/15 p-2">
+              <Icon size={20} className="text-white" />
+            </div>
+            <div>
+              {subtitle && <p className="text-[10px] font-black uppercase tracking-[0.2em] text-white/70">{subtitle}</p>}
+              <h2 className="text-lg font-bold text-white leading-tight">{title}</h2>
+            </div>
+          </div>
+          <button onClick={onClose} className="mt-0.5 rounded-lg p-1.5 text-white/70 hover:text-white hover:bg-white/10 transition-colors shrink-0">
+            <X size={18} />
+          </button>
+        </div>
+        {/* Scrollable body */}
+        <div className="overflow-y-auto flex-1">{children}</div>
+        {/* Footer */}
+        <div className="px-5 py-3 border-t border-border/50 flex items-center justify-between shrink-0">
+          <p className="text-xs text-muted-foreground">Live data from SPARK database</p>
+          <button onClick={onClose} className="px-4 py-2 text-sm font-semibold bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-colors">
+            Close
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function ActionCard({ item }: { item: AdminCohortAction }) {
+  const [open, setOpen] = useState(false);
   const toneClass =
     item.tone === "critical"
       ? "bg-rose-500/12 text-rose-700"
@@ -209,85 +443,504 @@ function ActionCard({ item }: { item: AdminCohortAction }) {
         : item.tone === "positive"
           ? "bg-emerald-500/12 text-emerald-700"
           : "bg-slate-500/12 text-slate-700";
+  const headerColor =
+    item.tone === "critical" ? "bg-rose-600" :
+    item.tone === "warning" ? "bg-amber-600" :
+    item.tone === "positive" ? "bg-emerald-600" : "bg-slate-600";
+  const IconComp = item.tone === "critical" ? ShieldAlert : item.tone === "warning" ? AlertTriangle : item.tone === "positive" ? BadgeCheck : Zap;
 
   return (
-    <div className="rounded-[1.5rem] border border-border/70 bg-card/70 p-4">
-      <div className="flex items-start justify-between gap-3">
-        <div>
-          <p className="text-sm font-semibold text-foreground">{item.title}</p>
-
-          <p className="mt-2 text-sm leading-6 text-muted-foreground">
-            {item.detail}
-          </p>
+    <>
+      <GenericDrillDownModal
+        isOpen={open}
+        onClose={() => setOpen(false)}
+        title={item.title}
+        subtitle="HOD Action Required"
+        headerColor={headerColor}
+        icon={IconComp}
+      >
+        <div className="p-5 space-y-4">
+          <div className="flex items-center gap-2">
+            <span className={`rounded-full px-3 py-1 text-[11px] font-black uppercase tracking-[0.18em] ${toneClass}`}>
+              {item.tone}
+            </span>
+            <span className="text-xs font-black uppercase tracking-widest text-primary">{item.metric}</span>
+          </div>
+          <div className="p-4 rounded-xl bg-muted/20 border border-border/50">
+            <p className="text-sm leading-relaxed text-foreground">{item.detail}</p>
+          </div>
+          <div className="space-y-2">
+            <p className="text-[10px] font-black uppercase tracking-[0.18em] text-muted-foreground">Why This Matters</p>
+            <div className="flex items-start gap-2 p-3 rounded-lg bg-amber-500/5 border border-amber-500/20">
+              <Zap size={13} className="text-amber-500 mt-0.5 shrink-0" />
+              <p className="text-sm text-foreground">
+                {item.tone === "critical"
+                  ? "This issue requires immediate HOD intervention. Delaying action may impact student outcomes and placement eligibility."
+                  : item.tone === "warning"
+                  ? "This situation is escalating and needs monitoring. Act within the week to prevent it becoming critical."
+                  : item.tone === "positive"
+                  ? "This is a positive signal worth amplifying. Share with the team and replicate the approach."
+                  : "Routine update — review and acknowledge when convenient."}
+              </p>
+            </div>
+          </div>
+          <div className="space-y-2">
+            <p className="text-[10px] font-black uppercase tracking-[0.18em] text-muted-foreground">Key Metric</p>
+            <div className="p-3 rounded-lg bg-primary/5 border border-primary/20">
+              <code className="text-sm font-mono text-foreground">{item.metric}</code>
+            </div>
+          </div>
         </div>
+      </GenericDrillDownModal>
 
-        <span
-          className={`rounded-full px-3 py-1 text-[11px] font-black uppercase tracking-[0.18em] ${toneClass}`}
-        >
-          {item.tone}
-        </span>
-      </div>
-
-      <p className="mt-4 text-xs font-black uppercase tracking-[0.16em] text-primary">
-        {item.metric}
-      </p>
-    </div>
+      <button
+        type="button"
+        onClick={() => setOpen(true)}
+        className="w-full text-left rounded-[1.5rem] border border-border/70 bg-card/70 p-4 hover:ring-2 hover:ring-primary/30 hover:shadow-md transition-all group"
+      >
+        <div className="flex items-start justify-between gap-3">
+          <div className="flex-1 min-w-0">
+            <p className="text-sm font-semibold text-foreground group-hover:text-primary transition-colors">{item.title}</p>
+            <p className="mt-2 text-sm leading-6 text-muted-foreground line-clamp-2">{item.detail}</p>
+          </div>
+          <span className={`rounded-full px-2 py-1 text-[11px] font-black uppercase tracking-[0.18em] shrink-0 ${toneClass}`}>
+            {item.tone}
+          </span>
+        </div>
+        <div className="mt-3 flex items-center justify-between">
+          <p className="text-xs font-black uppercase tracking-[0.16em] text-primary">{item.metric}</p>
+          <span className="text-[10px] text-primary/60 opacity-0 group-hover:opacity-100 transition-opacity">View details →</span>
+        </div>
+      </button>
+    </>
   );
 }
 
 function FacultyCard({ item }: { item: FacultyImpactMatrixItem }) {
+  const [open, setOpen] = useState(false);
+  const failRate = item.failure_rate ?? 0;
+  const avgMarks = item.average_marks ?? 0;
+  const headerColor = failRate > 40 ? "bg-rose-600" : failRate > 20 ? "bg-amber-600" : "bg-emerald-600";
+
   return (
-    <div className="p-4 rounded-2xl border border-border/60 bg-muted/10 hover:bg-muted/20 transition-colors">
-      <div className="flex items-start justify-between gap-3">
-        <div>
-          <p className="text-sm font-semibold text-foreground">
-            {item.faculty_name}
-          </p>
-
-          <p className="text-xs text-muted-foreground uppercase tracking-widest mt-0.5">
-            {item.subject_code}
-          </p>
+    <>
+      <GenericDrillDownModal
+        isOpen={open}
+        onClose={() => setOpen(false)}
+        title={item.faculty_name}
+        subtitle="Faculty Impact Breakdown"
+        headerColor={headerColor}
+        icon={Briefcase}
+      >
+        <div className="p-5 space-y-4">
+          <div className="flex items-center gap-2 flex-wrap">
+            <span className="font-mono text-xs font-black tracking-widest px-2 py-0.5 rounded bg-muted/20 border border-border/40">{item.subject_code}</span>
+            <span className="text-sm text-muted-foreground">{item.subject_name}</span>
+            {item.impact_label && (
+              <span className="px-2 py-1 rounded-full bg-primary/10 text-primary text-[10px] font-black uppercase tracking-[0.2em]">{item.impact_label}</span>
+            )}
+          </div>
+          <div className="grid grid-cols-3 gap-3">
+            {[
+              { label: "Failure Rate", value: `${failRate.toFixed?.(1) ?? failRate}%`, status: failRate > 40 ? "bad" : failRate > 20 ? "warn" : "good" },
+              { label: "Avg Marks", value: String(avgMarks.toFixed?.(1) ?? avgMarks), status: avgMarks >= 60 ? "good" : avgMarks >= 40 ? "warn" : "bad" },
+              { label: "Students", value: String(item.student_count), status: "neutral" },
+            ].map((s) => (
+              <div key={s.label} className="p-3 rounded-xl bg-muted/10 border border-border/40 text-center">
+                <p className={`text-xl font-bold ${
+                  s.status === "good" ? "text-emerald-500" : s.status === "bad" ? "text-rose-500" : s.status === "warn" ? "text-amber-500" : "text-foreground"
+                }`}>{s.value}</p>
+                <p className="text-[10px] uppercase tracking-widest text-muted-foreground mt-1">{s.label}</p>
+              </div>
+            ))}
+          </div>
+          <div className="space-y-2">
+            <p className="text-[10px] font-black uppercase tracking-[0.18em] text-muted-foreground">Performance Analysis</p>
+            <div className="flex items-start gap-2 p-3 rounded-lg bg-amber-500/5 border border-amber-500/20">
+              <Zap size={13} className="text-amber-500 mt-0.5 shrink-0" />
+              <p className="text-sm text-foreground">
+                {failRate > 40
+                  ? `High failure rate of ${failRate.toFixed?.(1)}% detected in ${item.subject_name}. This may indicate subject difficulty, teaching methodology, or student preparation gaps. Consider syllabus review or extra support sessions.`
+                  : failRate > 20
+                  ? `Moderate failure rate of ${failRate.toFixed?.(1)}%. Monitor closely and consider targeted revision sessions for struggling students.`
+                  : `Failure rate is healthy at ${failRate.toFixed?.(1)}%. ${item.faculty_name} is performing well in ${item.subject_name}.`}
+              </p>
+            </div>
+          </div>
+          <div className="space-y-2">
+            <p className="text-[10px] font-black uppercase tracking-[0.18em] text-muted-foreground">How Failure Rate Is Calculated</p>
+            <div className="p-3 rounded-xl bg-primary/5 border border-primary/20">
+              <code className="text-xs font-mono text-foreground">Failure Rate = Students scoring below pass threshold / Total students × 100</code>
+            </div>
+          </div>
         </div>
+      </GenericDrillDownModal>
 
-        <span className="px-2 py-1 rounded-full bg-primary/10 text-primary text-[10px] font-black uppercase tracking-[0.2em]">
-          {item.impact_label || "IMPACT"}
-        </span>
-      </div>
-
-      <p className="text-xs text-muted-foreground mt-1 line-clamp-2">
-        {item.subject_name}
-      </p>
-
-      <div className="mt-3 grid grid-cols-3 gap-3 text-xs font-bold text-foreground">
-        <div>
-          <p className="text-lg leading-tight">
-            {item.failure_rate?.toFixed?.(1) ?? item.failure_rate}%
-          </p>
-
-          <p className="text-[10px] uppercase tracking-widest text-muted-foreground">
-            Fail Rate
-          </p>
+      <button
+        type="button"
+        onClick={() => setOpen(true)}
+        className="w-full text-left p-4 rounded-2xl border border-border/60 bg-muted/10 hover:bg-muted/20 hover:ring-2 hover:ring-primary/30 transition-all group"
+      >
+        <div className="flex items-start justify-between gap-3">
+          <div className="min-w-0">
+            <p className="text-sm font-semibold text-foreground group-hover:text-primary transition-colors">{item.faculty_name}</p>
+            <p className="text-xs text-muted-foreground uppercase tracking-widest mt-0.5">{item.subject_code}</p>
+          </div>
+          <span className="px-2 py-1 rounded-full bg-primary/10 text-primary text-[10px] font-black uppercase tracking-[0.2em] shrink-0">{item.impact_label || "IMPACT"}</span>
         </div>
-
-        <div>
-          <p className="text-lg leading-tight">
-            {item.average_marks?.toFixed?.(1) ?? item.average_marks}
-          </p>
-
-          <p className="text-[10px] uppercase tracking-widest text-muted-foreground">
-            Avg Marks
-          </p>
+        <p className="text-xs text-muted-foreground mt-1 line-clamp-2">{item.subject_name}</p>
+        <div className="mt-3 grid grid-cols-3 gap-3 text-xs font-bold text-foreground">
+          <div>
+            <p className={`text-lg leading-tight ${failRate > 40 ? "text-rose-500" : failRate > 20 ? "text-amber-500" : "text-emerald-500"}`}>{failRate.toFixed?.(1) ?? failRate}%</p>
+            <p className="text-[10px] uppercase tracking-widest text-muted-foreground">Fail Rate</p>
+          </div>
+          <div>
+            <p className="text-lg leading-tight">{avgMarks.toFixed?.(1) ?? avgMarks}</p>
+            <p className="text-[10px] uppercase tracking-widest text-muted-foreground">Avg Marks</p>
+          </div>
+          <div>
+            <p className="text-lg leading-tight">{item.student_count}</p>
+            <p className="text-[10px] uppercase tracking-widest text-muted-foreground">Students</p>
+          </div>
         </div>
+        <p className="mt-2 text-[10px] text-primary/60 opacity-0 group-hover:opacity-100 transition-opacity">Click to view breakdown →</p>
+      </button>
+    </>
+  );
+}
 
-        <div>
-          <p className="text-lg leading-tight">{item.student_count}</p>
+// ─── Command Alert Row ────────────────────────────────────────────────────────
+function CommandAlertRow({ alert }: { alert: string }) {
+  const [open, setOpen] = useState(false);
+  const isCritical = /risk|fail|backlog|critical|below|drop/i.test(alert);
+  const isWarning = /warn|low|attention|monitor/i.test(alert);
+  const headerColor = isCritical ? "bg-rose-600" : isWarning ? "bg-amber-600" : "bg-slate-600";
+  const IconComp = isCritical ? ShieldAlert : isWarning ? AlertTriangle : Info;
 
-          <p className="text-[10px] uppercase tracking-widest text-muted-foreground">
-            Students
-          </p>
+  return (
+    <>
+      <GenericDrillDownModal isOpen={open} onClose={() => setOpen(false)} title="Command Alert" subtitle="System Detection" headerColor={headerColor} icon={IconComp}>
+        <div className="p-5 space-y-4">
+          <div className={`p-4 rounded-xl border ${isCritical ? "bg-rose-500/5 border-rose-500/20" : isWarning ? "bg-amber-500/5 border-amber-500/20" : "bg-slate-500/5 border-slate-500/20"}`}>
+            <p className="text-sm text-foreground leading-relaxed">{alert}</p>
+          </div>
+          <div className="space-y-2">
+            <p className="text-[10px] font-black uppercase tracking-[0.18em] text-muted-foreground">Severity Classification</p>
+            <div className="flex items-center gap-2 p-3 rounded-lg bg-muted/10 border border-border/40">
+              <IconComp size={14} className={isCritical ? "text-rose-500" : isWarning ? "text-amber-500" : "text-slate-500"} />
+              <p className="text-sm text-foreground font-medium">
+                {isCritical ? "Critical — Immediate HOD action required" : isWarning ? "Warning — Monitor and plan intervention" : "Informational — No immediate action needed"}
+              </p>
+            </div>
+          </div>
+          <div className="space-y-2">
+            <p className="text-[10px] font-black uppercase tracking-[0.18em] text-muted-foreground">What Triggers This Alert</p>
+            <div className="flex items-start gap-2 p-3 rounded-lg bg-amber-500/5 border border-amber-500/20">
+              <Zap size={13} className="text-amber-500 mt-0.5 shrink-0" />
+              <p className="text-sm text-foreground">
+                {isCritical
+                  ? "This alert is triggered when a student metric crosses a critical threshold \u2014 such as attendance dropping below 60%, GPA below 5.0, or a surge in active backlogs. It signals a systemic issue requiring prompt review."
+                  : isWarning
+                  ? "This alert fires when a metric is trending toward a critical threshold but hasn\u2019t crossed it yet. It gives HODs a window to intervene before the situation worsens."
+                  : "This is a routine system notification about a data anomaly or a minor boundary condition. Review at your convenience."}
+              </p>
+            </div>
+          </div>
         </div>
-      </div>
-    </div>
+      </GenericDrillDownModal>
+
+      <button
+        type="button"
+        onClick={() => setOpen(true)}
+        className="row-card w-full text-left group hover:ring-2 hover:ring-primary/30 transition-all"
+      >
+        <div className="flex items-center gap-3">
+          <div className={`rounded-full p-2 shrink-0 ${isCritical ? "bg-rose-500/10 text-rose-500" : isWarning ? "bg-amber-500/10 text-amber-500" : "bg-slate-500/10 text-slate-500"}`}>
+            <AlertTriangle size={16} />
+          </div>
+          <p className="text-sm text-foreground flex-1 min-w-0 group-hover:text-primary transition-colors line-clamp-2">{alert}</p>
+          <span className="text-[10px] text-primary/60 opacity-0 group-hover:opacity-100 transition-opacity shrink-0">→</span>
+        </div>
+      </button>
+    </>
+  );
+}
+
+// ─────────────────── Batch Health Row ─────────────────────────────────────────
+function BatchHealthRow({ batch, deptAvgGpa, deptAvgAttn }: { batch: any; deptAvgGpa: number; deptAvgAttn: number }) {
+  const [open, setOpen] = useState(false);
+  const atRiskPct = batch.student_count > 0 ? ((batch.at_risk_count / batch.student_count) * 100).toFixed(1) : "0";
+  const gpaVsDept = (batch.average_gpa - deptAvgGpa).toFixed(2);
+  const attnVsDept = (batch.average_attendance - deptAvgAttn).toFixed(1);
+  const headerColor = batch.average_gpa >= 6 && batch.average_attendance >= 75 ? "bg-emerald-600" : batch.average_gpa >= 5 ? "bg-amber-600" : "bg-rose-600";
+
+  return (
+    <>
+      <GenericDrillDownModal isOpen={open} onClose={() => setOpen(false)} title={`Batch ${batch.batch}`} subtitle="Batch Health Breakdown" headerColor={headerColor} icon={Users}>
+        <div className="p-5 space-y-4">
+          <div className="grid grid-cols-2 gap-3">
+            {[
+              { label: "Students", value: String(batch.student_count), status: "neutral" as const },
+              { label: "At Risk", value: `${batch.at_risk_count} (${atRiskPct}%)`, status: (batch.at_risk_count === 0 ? "good" : batch.at_risk_count < 5 ? "warn" : "bad") as "good"|"warn"|"bad" },
+              { label: "Avg GPA", value: `${batch.average_gpa} / 10`, status: (batch.average_gpa >= 7 ? "good" : batch.average_gpa >= 5 ? "warn" : "bad") as "good"|"warn"|"bad" },
+              { label: "Attendance", value: `${batch.average_attendance}%`, status: (batch.average_attendance >= 75 ? "good" : batch.average_attendance >= 60 ? "warn" : "bad") as "good"|"warn"|"bad" },
+            ].map((s) => (
+              <div key={s.label} className="p-3 rounded-xl bg-muted/10 border border-border/40 text-center">
+                <p className={`text-xl font-bold ${s.status === "good" ? "text-emerald-500" : s.status === "bad" ? "text-rose-500" : s.status === "warn" ? "text-amber-500" : "text-foreground"}`}>{s.value}</p>
+                <p className="text-[10px] uppercase tracking-widest text-muted-foreground mt-1">{s.label}</p>
+              </div>
+            ))}
+          </div>
+          <div className="space-y-2">
+            <p className="text-[10px] font-black uppercase tracking-[0.18em] text-muted-foreground">vs. Department Average</p>
+            <div className="space-y-2">
+              <div className="flex items-center justify-between p-3 rounded-lg bg-muted/10 border border-border/40">
+                <span className="text-sm text-foreground">GPA vs Dept Avg ({deptAvgGpa})</span>
+                <span className={`text-sm font-bold ${Number(gpaVsDept) >= 0 ? "text-emerald-500" : "text-rose-500"}`}>{Number(gpaVsDept) >= 0 ? "+" : ""}{gpaVsDept}</span>
+              </div>
+              <div className="flex items-center justify-between p-3 rounded-lg bg-muted/10 border border-border/40">
+                <span className="text-sm text-foreground">Attendance vs Dept Avg ({deptAvgAttn}%)</span>
+                <span className={`text-sm font-bold ${Number(attnVsDept) >= 0 ? "text-emerald-500" : "text-rose-500"}`}>{Number(attnVsDept) >= 0 ? "+" : ""}{attnVsDept}%</span>
+              </div>
+            </div>
+          </div>
+          <div className="flex items-start gap-2 p-3 rounded-lg bg-amber-500/5 border border-amber-500/20">
+            <Zap size={13} className="text-amber-500 mt-0.5 shrink-0" />
+            <p className="text-sm text-foreground">
+              {batch.at_risk_count > 0
+                ? `${batch.at_risk_count} student${batch.at_risk_count !== 1 ? "s" : ""} (${atRiskPct}%) in this batch need intervention. Check the Risk Radar for individual profiles.`
+                : "All students in this batch are performing within acceptable ranges. No immediate intervention required."}
+            </p>
+          </div>
+        </div>
+      </GenericDrillDownModal>
+
+      <button type="button" onClick={() => setOpen(true)} className="row-card w-full text-left group hover:ring-2 hover:ring-primary/30 transition-all">
+        <div className="flex items-center justify-between w-full gap-3">
+          <div>
+            <p className="text-sm font-semibold text-foreground group-hover:text-primary transition-colors">Batch {batch.batch}</p>
+            <p className="text-xs text-muted-foreground">{batch.student_count} students | {batch.at_risk_count} at risk</p>
+          </div>
+          <div className="text-right shrink-0">
+            <p className={`text-sm font-bold ${batch.average_gpa >= 7 ? "text-emerald-600" : batch.average_gpa >= 5 ? "text-amber-600" : "text-rose-600"}`}>{batch.average_gpa} GPA</p>
+            <p className={`text-xs ${batch.average_attendance >= 75 ? "text-emerald-500" : "text-amber-500"}`}>{batch.average_attendance}% Attn</p>
+          </div>
+        </div>
+      </button>
+    </>
+  );
+}
+
+// \u2500\u2500\u2500 Semester Pulse Row \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500
+function SemesterPulseRow({ pulse }: { pulse: any }) {
+  const [open, setOpen] = useState(false);
+  const riskPct = pulse.student_count > 0 ? ((pulse.at_risk_count / pulse.student_count) * 100).toFixed(1) : "0";
+  const headerColor = pulse.average_gpa >= 7 ? "bg-emerald-600" : pulse.average_gpa >= 5 ? "bg-amber-600" : "bg-rose-600";
+
+  return (
+    <>
+      <GenericDrillDownModal isOpen={open} onClose={() => setOpen(false)} title={`Semester ${pulse.semester}`} subtitle="Semester Performance" headerColor={headerColor} icon={BookOpen}>
+        <div className="p-5 space-y-4">
+          <div className="grid grid-cols-3 gap-3">
+            {[
+              { label: "Enrollment", value: String(pulse.student_count), status: "neutral" as const },
+              { label: "Flagged", value: `${pulse.at_risk_count} (${riskPct}%)`, status: (pulse.at_risk_count === 0 ? "good" : "warn") as "good"|"warn" },
+              { label: "Avg GPA", value: String(pulse.average_gpa), status: (pulse.average_gpa >= 7 ? "good" : pulse.average_gpa >= 5 ? "warn" : "bad") as "good"|"warn"|"bad" },
+            ].map((s) => (
+              <div key={s.label} className="p-3 rounded-xl bg-muted/10 border border-border/40 text-center">
+                <p className={`text-xl font-bold ${s.status === "good" ? "text-emerald-500" : s.status === "bad" ? "text-rose-500" : s.status === "warn" ? "text-amber-500" : "text-foreground"}`}>{s.value}</p>
+                <p className="text-[10px] uppercase tracking-widest text-muted-foreground mt-1">{s.label}</p>
+              </div>
+            ))}
+          </div>
+          <div className="p-4 rounded-xl bg-primary/5 border border-primary/20">
+            <p className="text-[10px] font-black uppercase tracking-[0.18em] text-primary mb-2">GPA Interpretation</p>
+            <p className="text-sm text-foreground">
+              {pulse.average_gpa >= 8 ? "Excellent cohort — well above placement standards." :
+               pulse.average_gpa >= 7 ? "Good performance — meets most industry benchmarks." :
+               pulse.average_gpa >= 5 ? "Average performance — some students need support." :
+               "Below average — targeted interventions recommended for this semester cohort."}
+            </p>
+          </div>
+          <div className="flex items-start gap-2 p-3 rounded-lg bg-amber-500/5 border border-amber-500/20">
+            <Zap size={13} className="text-amber-500 mt-0.5 shrink-0" />
+            <p className="text-sm text-foreground">
+              {pulse.at_risk_count === 0
+                ? "No students flagged as at-risk in this semester."
+                : `${pulse.at_risk_count} student${pulse.at_risk_count !== 1 ? "s" : ""} (${riskPct}%) in Semester ${pulse.semester} are flagged for academic risk.`}
+            </p>
+          </div>
+        </div>
+      </GenericDrillDownModal>
+
+      <button type="button" onClick={() => setOpen(true)} className="row-card w-full text-left group hover:ring-2 hover:ring-primary/30 transition-all">
+        <div className="flex items-center justify-between w-full gap-3">
+          <div>
+            <p className="text-sm font-semibold text-foreground group-hover:text-primary transition-colors">Semester {pulse.semester}</p>
+            <p className="text-xs text-muted-foreground">{pulse.student_count} enrollment | {pulse.at_risk_count} flagging</p>
+          </div>
+          <p className={`text-sm font-bold shrink-0 ${pulse.average_gpa >= 7 ? "text-emerald-600" : pulse.average_gpa >= 5 ? "text-amber-600" : "text-rose-600"}`}>{pulse.average_gpa} avg</p>
+        </div>
+      </button>
+    </>
+  );
+}
+
+// \u2500\u2500\u2500 Subject Coverage Row \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500
+function SubjectCoverageRow({ item }: { item: any }) {
+  const [open, setOpen] = useState(false);
+  const coveragePct = item.total_subjects > 0 ? Math.round((item.ranked_subjects / item.total_subjects) * 100) : 0;
+  const headerColor = coveragePct >= 80 ? "bg-emerald-600" : coveragePct >= 50 ? "bg-amber-600" : "bg-rose-600";
+
+  return (
+    <>
+      <GenericDrillDownModal isOpen={open} onClose={() => setOpen(false)} title={`Semester ${item.semester} Coverage`} subtitle="Subject Ranking Coverage" headerColor={headerColor} icon={BarChart2}>
+        <div className="p-5 space-y-4">
+          <div className="grid grid-cols-3 gap-3">
+            {[
+              { label: "Total", value: String(item.total_subjects), status: "neutral" as const },
+              { label: "Ranked", value: String(item.ranked_subjects), status: (item.ranked_subjects === item.total_subjects ? "good" : item.ranked_subjects > 0 ? "warn" : "bad") as "good"|"warn"|"bad" },
+              { label: "Coverage", value: `${coveragePct}%`, status: (coveragePct >= 80 ? "good" : coveragePct >= 50 ? "warn" : "bad") as "good"|"warn"|"bad" },
+            ].map((s) => (
+              <div key={s.label} className="p-3 rounded-xl bg-muted/10 border border-border/40 text-center">
+                <p className={`text-xl font-bold ${s.status === "good" ? "text-emerald-500" : s.status === "bad" ? "text-rose-500" : s.status === "warn" ? "text-amber-500" : "text-foreground"}`}>{s.value}</p>
+                <p className="text-[10px] uppercase tracking-widest text-muted-foreground mt-1">{s.label}</p>
+              </div>
+            ))}
+          </div>
+          <div className="p-4 rounded-xl bg-primary/5 border border-primary/20">
+            <p className="text-[10px] font-black uppercase tracking-[0.18em] text-primary mb-2">What Is Ranking Coverage?</p>
+            <p className="text-sm text-foreground">A subject is "ranked" when at least one student has a recorded mark or grade for it. Out of {item.total_subjects} subjects in Semester {item.semester}, {item.ranked_subjects} have performance data. Missing data reduces the accuracy of leaderboard and bottleneck analysis.</p>
+          </div>
+          <div className="h-2 w-full rounded-full bg-muted/40 overflow-hidden">
+            <div className={`h-full transition-all ${coveragePct >= 80 ? "bg-emerald-500" : coveragePct >= 50 ? "bg-amber-500" : "bg-rose-500"}`} style={{ width: `${coveragePct}%` }} />
+          </div>
+        </div>
+      </GenericDrillDownModal>
+
+      <button type="button" onClick={() => setOpen(true)} className="row-card w-full text-left group hover:ring-2 hover:ring-primary/30 transition-all">
+        <div className="flex items-center justify-between w-full gap-3">
+          <p className="text-sm font-bold group-hover:text-primary transition-colors">Sem {item.semester}</p>
+          <p className="text-xs text-muted-foreground">{item.ranked_subjects}/{item.total_subjects} Ranked</p>
+        </div>
+        <div className="mt-2 h-1.5 w-full rounded-full bg-muted/40 overflow-hidden">
+          <div className={`h-full ${coveragePct >= 80 ? "bg-emerald-500" : coveragePct >= 50 ? "bg-amber-500" : "bg-rose-500"}`} style={{ width: `${coveragePct}%` }} />
+        </div>
+      </button>
+    </>
+  );
+}
+
+// \u2500\u2500\u2500 Attendance Batch Row \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500
+function AttendanceBatchRow({ batch }: { batch: any }) {
+  const [open, setOpen] = useState(false);
+  const attn = batch.average_attendance ?? 0;
+  const attnColor = attn >= 75 ? "text-emerald-600" : attn >= 60 ? "text-amber-600" : "text-rose-600";
+  const barColor = attn >= 75 ? "bg-emerald-500" : attn >= 60 ? "bg-amber-500" : "bg-rose-500";
+  const headerColor = attn >= 75 ? "bg-emerald-600" : attn >= 60 ? "bg-amber-600" : "bg-rose-600";
+
+  return (
+    <>
+      <GenericDrillDownModal isOpen={open} onClose={() => setOpen(false)} title={`Batch ${batch.batch} Attendance`} subtitle="Attendance Analysis" headerColor={headerColor} icon={Clock}>
+        <div className="p-5 space-y-4">
+          <div className="flex items-center gap-4 p-4 rounded-xl bg-muted/20 border border-border/50">
+            <p className={`text-5xl font-bold ${attnColor}`}>{attn}%</p>
+            <div>
+              <p className="text-sm font-semibold text-foreground">{batch.student_count} students</p>
+              <p className="text-xs text-muted-foreground">{batch.at_risk_count ?? 0} at risk overall</p>
+            </div>
+          </div>
+          <div>
+            <div className="flex items-center justify-between mb-1.5">
+              <span className="text-xs text-muted-foreground">Attendance</span>
+              <span className={`text-xs font-bold ${attnColor}`}>{attn}%</span>
+            </div>
+            <div className="h-3 w-full rounded-full bg-muted/40 overflow-hidden">
+              <div className={`h-full ${barColor} transition-all`} style={{ width: `${attn}%` }} />
+            </div>
+          </div>
+          <div className="p-4 rounded-xl bg-primary/5 border border-primary/20">
+            <p className="text-[10px] font-black uppercase tracking-[0.18em] text-primary mb-2">Attendance Thresholds</p>
+            <ul className="text-xs space-y-1 text-muted-foreground">
+              <li>• <span className="text-emerald-500">\u2265 75%</span> — Good standing, placement eligible</li>
+              <li>• <span className="text-amber-500">60\u201374%</span> — Warning zone, condonation may be required</li>
+              <li>• <span className="text-rose-500">&lt; 60%</span> — At risk, ineligible for exams without special approval</li>
+            </ul>
+          </div>
+          <div className="flex items-start gap-2 p-3 rounded-lg bg-amber-500/5 border border-amber-500/20">
+            <Zap size={13} className="text-amber-500 mt-0.5 shrink-0" />
+            <p className="text-sm text-foreground">
+              {attn >= 75
+                ? `Batch ${batch.batch} has a healthy attendance average. Keep encouraging consistent class participation.`
+                : attn >= 60
+                ? `Batch ${batch.batch} is in the warning zone. Notify coordinators to follow up with students missing classes.`
+                : `Critical attendance in Batch ${batch.batch}. Many students may be ineligible for exams. Immediate intervention required.`}
+            </p>
+          </div>
+        </div>
+      </GenericDrillDownModal>
+
+      <button type="button" onClick={() => setOpen(true)} className="row-card w-full text-left group hover:ring-2 hover:ring-primary/30 transition-all">
+        <div className="flex items-center justify-between gap-3 w-full">
+          <div>
+            <p className="text-sm font-semibold text-foreground group-hover:text-primary transition-colors">Batch {batch.batch}</p>
+            <p className="text-xs text-muted-foreground">{batch.student_count} students</p>
+          </div>
+          <div className="flex items-center gap-3 shrink-0">
+            <div className="w-24 sm:w-36 md:w-48">
+              <div className="h-2 w-full rounded-full bg-muted/40 overflow-hidden">
+                <div className={`h-full transition-all ${barColor}`} style={{ width: `${attn}%` }} />
+              </div>
+            </div>
+            <p className={`font-bold text-right w-12 ${attnColor}`}>{attn}%</p>
+          </div>
+        </div>
+      </button>
+    </>
+  );
+}
+
+// \u2500\u2500\u2500 Attendance Semester Row \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500
+function AttendanceSemesterRow({ pulse }: { pulse: any }) {
+  const [open, setOpen] = useState(false);
+  const attn = pulse.avg_attendance ?? 0;
+  const attnColor = attn >= 75 ? "text-emerald-600" : attn >= 60 ? "text-amber-600" : "text-rose-600";
+  const headerColor = attn >= 75 ? "bg-emerald-600" : attn >= 60 ? "bg-amber-600" : "bg-rose-600";
+
+  return (
+    <>
+      <GenericDrillDownModal isOpen={open} onClose={() => setOpen(false)} title={`Semester ${pulse.semester} Attendance`} subtitle="Semester Attendance" headerColor={headerColor} icon={Clock}>
+        <div className="p-5 space-y-4">
+          <div className="grid grid-cols-2 gap-3">
+            <div className="p-3 rounded-xl bg-muted/10 border border-border/40 text-center">
+              <p className={`text-2xl font-bold ${attnColor}`}>{attn !== "N/A" ? `${attn}%` : "N/A"}</p>
+              <p className="text-[10px] uppercase tracking-widest text-muted-foreground mt-1">Avg Attendance</p>
+            </div>
+            <div className="p-3 rounded-xl bg-muted/10 border border-border/40 text-center">
+              <p className="text-2xl font-bold text-foreground">{pulse.student_count ?? "\u2014"}</p>
+              <p className="text-[10px] uppercase tracking-widest text-muted-foreground mt-1">Students</p>
+            </div>
+          </div>
+          <div className="flex items-start gap-2 p-3 rounded-lg bg-amber-500/5 border border-amber-500/20">
+            <Zap size={13} className="text-amber-500 mt-0.5 shrink-0" />
+            <p className="text-sm text-foreground">
+              {attn === "N/A" || attn === 0
+                ? "No attendance data recorded for this semester yet."
+                : attn >= 75
+                ? `Semester ${pulse.semester} attendance is healthy at ${attn}%.`
+                : `Semester ${pulse.semester} attendance (${attn}%) is below the recommended 75% threshold. Follow up with semester coordinators.`}
+            </p>
+          </div>
+        </div>
+      </GenericDrillDownModal>
+
+      <button type="button" onClick={() => setOpen(true)} className="row-card w-full text-left group hover:ring-2 hover:ring-primary/30 transition-all">
+        <div className="flex items-center justify-between w-full gap-3">
+          <p className="text-sm font-semibold text-foreground group-hover:text-primary transition-colors">Semester {pulse.semester}</p>
+          <p className={`text-xs font-bold ${attnColor}`}>{attn !== "N/A" ? `${attn}%` : "N/A"} average</p>
+        </div>
+      </button>
+    </>
   );
 }
 
@@ -1781,31 +2434,211 @@ export default function AdminDashboard() {
     }
   };
 
+  // ── Metric drill-down state ────────────────────────────────────────────────
+  const [drillDownMetric, setDrillDownMetric] = useState<MetricDetail | null>(null);
+
+  // Helper to build details from live data
+  const healthScore = data?.department_health.overall_health_score ?? 0;
+  const activeStudents = data?.department_health.active_students ?? 0;
+  const atRiskCount = data?.department_health.at_risk_count ?? 0;
+  const averageGpa = data?.department_health.average_gpa ?? 0;
+  const avgAttendance = data?.department_health.average_attendance ?? 0;
+  const placementReady = data?.placement_summary.ready_count ?? 0;
+  const placementAlmost = data?.placement_summary.almost_ready_count ?? 0;
+  const placementBlocked = data?.placement_summary.blocked_count ?? 0;
+  const avgCodingScore = data?.placement_summary.avg_coding_score ?? 0;
+
+  const metricDetails: Record<string, MetricDetail> = {
+    health: {
+      title: "Department Health Score",
+      value: `${healthScore}%`,
+      icon: Activity,
+      color: healthScore >= 75 ? "bg-emerald-600" : healthScore >= 50 ? "bg-amber-600" : "bg-rose-600",
+      summary: `The Health Score is a composite percentage that reflects overall academic quality across all active students. A score of ${healthScore}% indicates ${
+        healthScore >= 75 ? "a healthy department" : healthScore >= 50 ? "moderate concern" : "critical intervention required"
+      }.`,
+      formula: "Health Score = (Avg GPA / 10 × 50%) + (Avg Attendance × 50%)",
+      sources: [
+        { label: "Average GPA (CGPA)", value: `${averageGpa} / 10`, note: "Contributes 50% weight", status: averageGpa >= 7 ? "good" : averageGpa >= 5 ? "warn" : "bad" },
+        { label: "Average Attendance", value: `${avgAttendance ?? 0}%`, note: "Contributes 50% weight", status: (avgAttendance ?? 0) >= 75 ? "good" : (avgAttendance ?? 0) >= 60 ? "warn" : "bad" },
+        { label: "Active Students", value: String(activeStudents), note: "Population used in calculation", status: "neutral" },
+        { label: "Students At Risk", value: String(atRiskCount), note: "Flagged for intervention", status: atRiskCount === 0 ? "good" : atRiskCount < 10 ? "warn" : "bad" },
+      ],
+      insights: [
+        `${atRiskCount} student${atRiskCount !== 1 ? "s" : ""} are flagged as at-risk and pulling the score down.`,
+        healthScore < 75 ? "Consider targeted interventions for low-GPA and low-attendance cohorts to improve the score." : "Score is healthy. Keep monitoring semester transitions.",
+      ],
+    },
+    activeStudents: {
+      title: "Active Student Population",
+      value: String(activeStudents),
+      icon: Users,
+      color: "bg-blue-600",
+      summary: `${activeStudents} students are currently enrolled and active in the system. This is the live headcount used across all metrics.`,
+      sources: [
+        { label: "Total Active Enrollments", value: String(activeStudents), status: "neutral" },
+        { label: "Students At Risk", value: String(atRiskCount), note: `${activeStudents > 0 ? ((atRiskCount / activeStudents) * 100).toFixed(1) : 0}% of population`, status: atRiskCount === 0 ? "good" : "warn" },
+        { label: "Placement Ready", value: String(placementReady), note: `${activeStudents > 0 ? ((placementReady / activeStudents) * 100).toFixed(1) : 0}% eligible`, status: "neutral" },
+        ...(data?.batch_health?.map((b: any) => ({
+          label: `Batch ${b.batch}`,
+          value: `${b.student_count} students`,
+          note: `GPA ${b.average_gpa} | Attn ${b.average_attendance}%`,
+          status: (b.average_gpa >= 6 && b.average_attendance >= 75 ? "good" : b.average_gpa >= 5 ? "warn" : "bad") as "good" | "warn" | "bad" | "neutral",
+        })) || []),
+      ],
+      insights: [
+        `${activeStudents > 0 ? ((atRiskCount / activeStudents) * 100).toFixed(1) : 0}% of students are flagged at-risk — ${atRiskCount < activeStudents * 0.1 ? "within acceptable range" : "above the 10% threshold, action recommended"}.`,
+        `${placementReady} out of ${activeStudents} students (${activeStudents > 0 ? ((placementReady / activeStudents) * 100).toFixed(1) : 0}%) are placement-ready.`,
+      ],
+    },
+    atRisk: {
+      title: "Students At Risk",
+      value: String(atRiskCount),
+      icon: ShieldAlert,
+      color: atRiskCount === 0 ? "bg-emerald-600" : atRiskCount < 10 ? "bg-amber-600" : "bg-rose-600",
+      summary: `${atRiskCount} students are flagged for academic intervention based on low GPA, poor attendance, or active backlogs. These students need immediate HOD attention.`,
+      formula: "At Risk = GPA < 5.0 OR Attendance < 60% OR Active Backlogs > 0",
+      sources: [
+        { label: "Low GPA (< 5.0)", value: `${data?.risk_breakdown?.low_gpa ?? "—"} students`, status: "bad" },
+        { label: "Low Attendance (< 60%)", value: `${data?.risk_breakdown?.low_attendance ?? "—"} students`, status: "warn" },
+        { label: "Active Backlogs", value: `${data?.risk_breakdown?.backlogs ?? "—"} students`, status: "bad" },
+        { label: "Overall At-Risk Count", value: String(atRiskCount), note: "Union of all risk signals", status: atRiskCount === 0 ? "good" : atRiskCount < 10 ? "warn" : "bad" },
+        ...(data?.batch_health?.map((b: any) => ({
+          label: `Batch ${b.batch} — at risk`,
+          value: String(b.at_risk_count),
+          note: `out of ${b.student_count} students`,
+          status: (b.at_risk_count === 0 ? "good" : b.at_risk_count < 3 ? "warn" : "bad") as "good" | "warn" | "bad" | "neutral",
+        })) || []),
+      ],
+      insights: [
+        atRiskCount === 0
+          ? "No at-risk students detected. Keep up the great work!"
+          : `${atRiskCount} students require intervention. Check the Risk Radar tab for individual student profiles.`,
+        "At-risk criteria: GPA below 5.0, attendance below 60%, or pending backlog papers.",
+      ],
+    },
+    avgGpa: {
+      title: "Average GPA (CGPA)",
+      value: String(averageGpa),
+      icon: Trophy,
+      color: averageGpa >= 7 ? "bg-emerald-600" : averageGpa >= 5 ? "bg-amber-600" : "bg-rose-600",
+      summary: `The department's average Cumulative Grade Point Average is ${averageGpa} out of 10. This is computed across all ${activeStudents} active students and all graded subjects.`,
+      formula: "CGPA = Σ(Grade Points × Credit Hours) / Σ(Credit Hours) per student, then averaged",
+      sources: [
+        { label: "Department Avg CGPA", value: `${averageGpa} / 10`, status: averageGpa >= 7 ? "good" : averageGpa >= 5 ? "warn" : "bad" },
+        { label: "Active Students", value: String(activeStudents), note: "Used in CGPA average", status: "neutral" },
+        ...(data?.semester_pulse?.map((p: any) => ({
+          label: `Semester ${p.semester}`,
+          value: `${p.average_gpa} avg GPA`,
+          note: `${p.student_count} students`,
+          status: (p.average_gpa >= 7 ? "good" : p.average_gpa >= 5 ? "warn" : "bad") as "good" | "warn" | "bad" | "neutral",
+        })) || []),
+      ],
+      insights: [
+        `A CGPA of ${averageGpa} is ${averageGpa >= 7 ? "above" : averageGpa >= 5 ? "at" : "below"} industry expectations for placement readiness.`,
+        "Hover over individual semester rows in the Semester Pulse section to compare cohort performance.",
+      ],
+    },
+    placementReady: {
+      title: "Placement Ready Students",
+      value: String(placementReady),
+      icon: BadgeCheck,
+      color: "bg-emerald-600",
+      summary: `${placementReady} students are fully eligible for campus placement drives. They meet minimum GPA, attendance, and backlog-free criteria.`,
+      formula: "Ready = No active backlogs AND GPA ≥ 6.0 AND Attendance ≥ 75%",
+      sources: [
+        { label: "Drive Eligible", value: String(placementReady), note: "All criteria met", status: "good" },
+        { label: "Almost Ready", value: String(placementAlmost), note: "1-2 criteria short", status: "warn" },
+        { label: "Blocked", value: String(placementBlocked), note: "Arrears or low GPA", status: "bad" },
+        { label: "Avg Coding Score", value: String(avgCodingScore), note: "Coding subject average", status: avgCodingScore >= 60 ? "good" : avgCodingScore >= 40 ? "warn" : "bad" },
+      ],
+      insights: [
+        `${placementBlocked} students are blocked due to arrears or GPA issues — contact them for remedial action.`,
+        `${placementAlmost} students are almost ready and could become eligible with focused effort this semester.`,
+      ],
+    },
+    placementAlmost: {
+      title: "Almost Ready for Placement",
+      value: String(placementAlmost),
+      icon: Target,
+      color: "bg-amber-600",
+      summary: `${placementAlmost} students are close to meeting placement eligibility. They fall short on one or two criteria and can be coached to readiness quickly.`,
+      formula: "Almost = Missing 1–2 of: No backlogs / GPA ≥ 6.0 / Attendance ≥ 75%",
+      sources: [
+        { label: "Placement Ready", value: String(placementReady), note: "For context", status: "good" },
+        { label: "Almost Ready", value: String(placementAlmost), note: "Primary metric", status: "warn" },
+        { label: "Blocked", value: String(placementBlocked), status: "bad" },
+        { label: "Total Active", value: String(activeStudents), status: "neutral" },
+      ],
+      insights: [
+        `These ${placementAlmost} students are the highest-ROI group — a targeted intervention plan can flip them to 'Ready' before drives begin.`,
+        "Check their individual profiles in the Students tab to identify which criterion they are missing.",
+      ],
+    },
+    placementBlocked: {
+      title: "Blocked from Placement",
+      value: String(placementBlocked),
+      icon: XCircle,
+      color: "bg-rose-600",
+      summary: `${placementBlocked} students are currently ineligible for placement drives due to active arrears, low GPA, or insufficient attendance.`,
+      formula: "Blocked = Active backlogs > 0 OR GPA < 5.0 OR Attendance < 60%",
+      sources: [
+        { label: "Blocked Students", value: String(placementBlocked), note: "Cannot attend drives", status: "bad" },
+        { label: "Almost Ready (can still improve)", value: String(placementAlmost), status: "warn" },
+        { label: "Fully Eligible", value: String(placementReady), status: "good" },
+      ],
+      insights: [
+        `Priority: Clear ${placementBlocked} blocked student${placementBlocked !== 1 ? "s" : ""} through backlog clearance programs and attendance improvement plans.`,
+        "Each blocked student represents a missed opportunity — coordinate with semester coordinators.",
+      ],
+    },
+    avgCoding: {
+      title: "Average Coding Score",
+      value: String(avgCodingScore),
+      icon: Code2,
+      color: avgCodingScore >= 60 ? "bg-blue-600" : avgCodingScore >= 40 ? "bg-amber-600" : "bg-rose-600",
+      summary: `The department's average score in coding-related subjects is ${avgCodingScore}. This is used as a key placement readiness indicator.`,
+      formula: "Avg Coding Score = Mean of all marks in subjects tagged as coding/programming",
+      sources: [
+        { label: "Avg Coding Score", value: String(avgCodingScore), note: "Across coding subjects", status: avgCodingScore >= 60 ? "good" : avgCodingScore >= 40 ? "warn" : "bad" },
+        { label: "Placement Ready", value: String(placementReady), note: "Eligible students", status: "neutral" },
+        { label: "Avg GPA", value: String(averageGpa), note: "For correlation", status: "neutral" },
+      ],
+      insights: [
+        `Coding scores ${avgCodingScore >= 60 ? "are competitive" : "need improvement"} for industry placement standards.`,
+        "Subjects contributing to this score can be viewed in the Subjects Management tab.",
+      ],
+    },
+  };
+
   return (
     <div className="w-full pb-24 lg:pb-10">
+      <MetricDrillDownModal detail={drillDownMetric} onClose={() => setDrillDownMetric(null)} />
       {activeTab !== "AI" && (
-        <div className="flex flex-wrap gap-2 mb-6">
-          {[
-            "Overview",
-            "Performance",
-            "Students",
-            "Attendance",
-            "Placements",
-            "Time Table",
-            "Security",
-            "Profile",
-            "Staff",
-            "Subjects",
-            "AI",
-          ].map((tab) => (
-            <button
-              key={tab}
-              onClick={() => setActiveTab(tab)}
-              className={`tab-chip ${activeTab === tab ? "!bg-primary !text-white shadow" : ""}`}
-            >
-              {tab}
-            </button>
-          ))}
+        <div className="-mx-1 mb-6 overflow-x-auto pb-1" style={{ WebkitOverflowScrolling: "touch" }}>
+          <div className="flex gap-2 min-w-max px-1">
+            {[
+              "Overview",
+              "Performance",
+              "Students",
+              "Attendance",
+              "Placements",
+              "Time Table",
+              "Security",
+              "Profile",
+              "Staff",
+              "Subjects",
+              "AI",
+            ].map((tab) => (
+              <button
+                key={tab}
+                onClick={() => setActiveTab(tab)}
+                className={`tab-chip whitespace-nowrap ${activeTab === tab ? "!bg-primary !text-white shadow" : ""}`}
+              >
+                {tab}
+              </button>
+            ))}
+          </div>
         </div>
       )}
 
@@ -1816,22 +2649,22 @@ export default function AdminDashboard() {
       {activeTab === "Overview" && (
         <div className="space-y-6">
           <header className="hero-panel">
-            <div className="space-y-3">
+            <div className="space-y-2 flex-1 min-w-0">
               <p className="text-[11px] font-black uppercase tracking-[0.24em] text-white/70">
                 Enterprise Academic Intelligence
               </p>
 
-              <h1 className="max-w-4xl text-4xl font-semibold tracking-tight text-white md:text-5xl">
+              <h1 className="max-w-4xl text-2xl sm:text-4xl md:text-5xl font-semibold tracking-tight text-white">
                 SPARK Command Center
               </h1>
 
-              <p className="max-w-3xl text-sm leading-6 text-slate-300 md:text-base">
+              <p className="max-w-3xl text-sm leading-6 text-slate-300 hidden sm:block">
                 {data?.daily_briefing ||
                   "Aggregating ranking, placement, bottleneck, and faculty impact signals."}
               </p>
             </div>
 
-            <div className="flex flex-wrap items-center gap-3">
+            <div className="flex items-center gap-3 mt-3 sm:mt-0">
               <button
                 type="button"
                 className="hero-button"
@@ -1843,11 +2676,10 @@ export default function AdminDashboard() {
                 }
               >
                 <Download size={16} />
+                <span className="text-sm font-semibold">Export</span>
               </button>
             </div>
           </header>
-
-          <AICopilot data={data} leaderboard={leaderboard} />
 
           <section
             id="command-center"
@@ -1862,25 +2694,43 @@ export default function AdminDashboard() {
                 <Metric
                   label="Health Score"
                   value={`${data?.department_health.overall_health_score ?? 0}%`}
-                  hint="Composite derived from GPA and attendance."
+                  hint="Composite of GPA + attendance."
+                  icon={Activity}
+                  color={healthScore >= 75 ? "emerald" : healthScore >= 50 ? "amber" : "rose"}
+                  trend={healthScore >= 75 ? "up" : healthScore >= 50 ? "neutral" : "down"}
+                  trendLabel={healthScore >= 75 ? "Healthy" : healthScore >= 50 ? "Moderate" : "Critical"}
+                  onClick={() => setDrillDownMetric(metricDetails.health)}
                 />
 
                 <Metric
                   label="Active Students"
                   value={String(data?.department_health.active_students ?? 0)}
-                  hint="Current MCA population."
+                  hint="Current enrolled population."
+                  icon={Users}
+                  color="blue"
+                  onClick={() => setDrillDownMetric(metricDetails.activeStudents)}
                 />
 
                 <Metric
                   label="At Risk"
                   value={String(data?.department_health.at_risk_count ?? 0)}
-                  hint="Students above intervention threshold."
+                  hint="Flagged for intervention."
+                  icon={ShieldAlert}
+                  color={atRiskCount === 0 ? "emerald" : atRiskCount < 10 ? "amber" : "rose"}
+                  trend={atRiskCount === 0 ? "up" : atRiskCount < 10 ? "neutral" : "down"}
+                  trendLabel={atRiskCount === 0 ? "All clear" : atRiskCount < 10 ? "Moderate" : "High"}
+                  onClick={() => setDrillDownMetric(metricDetails.atRisk)}
                 />
 
                 <Metric
                   label="Average GPA"
                   value={String(data?.department_health.average_gpa ?? 0)}
-                  hint="Current department CGPA."
+                  hint="Department CGPA out of 10."
+                  icon={Trophy}
+                  color={averageGpa >= 7 ? "emerald" : averageGpa >= 5 ? "amber" : "rose"}
+                  trend={averageGpa >= 7 ? "up" : averageGpa >= 5 ? "neutral" : "down"}
+                  trendLabel={`${averageGpa} / 10`}
+                  onClick={() => setDrillDownMetric(metricDetails.avgGpa)}
                 />
               </>
             )}
@@ -1902,11 +2752,16 @@ export default function AdminDashboard() {
                 <Target size={18} className="text-primary" />
               </div>
 
-              <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+              <div className="grid grid-cols-2 gap-3 xl:grid-cols-4">
                 <Metric
                   label="Ready"
                   value={String(data?.placement_summary.ready_count ?? 0)}
                   hint="Drive eligible."
+                  icon={BadgeCheck}
+                  color="emerald"
+                  trend="up"
+                  trendLabel="Eligible"
+                  onClick={() => setDrillDownMetric(metricDetails.placementReady)}
                 />
 
                 <Metric
@@ -1915,24 +2770,37 @@ export default function AdminDashboard() {
                     data?.placement_summary.almost_ready_count ?? 0,
                   )}
                   hint="Near threshold."
+                  icon={Target}
+                  color="amber"
+                  trend="neutral"
+                  trendLabel="Close"
+                  onClick={() => setDrillDownMetric(metricDetails.placementAlmost)}
                 />
 
                 <Metric
                   label="Blocked"
                   value={String(data?.placement_summary.blocked_count ?? 0)}
                   hint="Arrears/low GPA."
+                  icon={XCircle}
+                  color="rose"
+                  trend="down"
+                  trendLabel="Needs action"
+                  onClick={() => setDrillDownMetric(metricDetails.placementBlocked)}
                 />
 
                 <Metric
                   label="Avg Code"
                   value={String(data?.placement_summary.avg_coding_score ?? 0)}
                   hint="Coding subject avg."
+                  icon={Code2}
+                  color={avgCodingScore >= 60 ? "blue" : avgCodingScore >= 40 ? "amber" : "rose"}
+                  onClick={() => setDrillDownMetric(metricDetails.avgCoding)}
                 />
               </div>
             </article>
           </section>
 
-          <section className="grid gap-4 xl:grid-cols-3">
+          <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
             <article className="panel">
               <div className="mb-4">
                 <p className="text-lg font-semibold text-foreground">
@@ -1940,7 +2808,7 @@ export default function AdminDashboard() {
                 </p>
 
                 <p className="text-sm text-muted-foreground">
-                  Critical interventions pending your approval.
+                  Critical interventions — tap any card to see full context.
                 </p>
               </div>
 
@@ -1949,6 +2817,9 @@ export default function AdminDashboard() {
                   (item: AdminCohortAction, i: number) => (
                     <ActionCard key={i} item={item} />
                   ),
+                )}
+                {!data?.action_queue?.length && (
+                  <p className="text-sm text-muted-foreground text-center py-6">No pending actions.</p>
                 )}
               </div>
             </article>
@@ -1960,22 +2831,20 @@ export default function AdminDashboard() {
                 </p>
 
                 <p className="text-sm text-muted-foreground">
-                  System notifications and anomaly detections.
+                  System anomalies — tap to understand the trigger.
                 </p>
               </div>
 
               <div className="space-y-3">
                 {data?.alerts?.map((alert: string, i: number) => (
-                  <div key={i} className="row-card">
-                    <div className="flex items-center gap-3">
-                      <div className="rounded-full bg-rose-500/10 p-2 text-rose-500">
-                        <AlertTriangle size={16} />
-                      </div>
-
-                      <p className="text-sm text-foreground">{alert}</p>
-                    </div>
-                  </div>
+                  <CommandAlertRow key={i} alert={alert} />
                 ))}
+                {!data?.alerts?.length && (
+                  <div className="flex flex-col items-center gap-2 py-6 text-center">
+                    <CheckCircle2 size={20} className="text-emerald-500" />
+                    <p className="text-sm text-muted-foreground">No active alerts — all clear.</p>
+                  </div>
+                )}
               </div>
             </article>
 
@@ -2024,63 +2893,21 @@ export default function AdminDashboard() {
 
           <section className="grid gap-4 xl:grid-cols-2">
             <article className="panel">
-              <p className="text-lg font-semibold text-foreground">
-                Batch Health
-              </p>
-
+              <p className="text-lg font-semibold text-foreground">Batch Health</p>
+              <p className="text-sm text-muted-foreground">Tap a batch for detailed breakdown.</p>
               <div className="mt-4 space-y-3">
                 {data?.batch_health?.map((batch: any) => (
-                  <div key={batch.batch} className="row-card">
-                    <div>
-                      <p className="text-sm font-semibold text-foreground">
-                        Batch {batch.batch}
-                      </p>
-
-                      <p className="text-xs text-muted-foreground">
-                        {batch.student_count} students | {batch.at_risk_count}{" "}
-                        at risk
-                      </p>
-                    </div>
-
-                    <div className="text-right">
-                      <p className="text-sm font-bold text-foreground">
-                        {batch.average_gpa} GPA
-                      </p>
-
-                      <p className="text-xs text-muted-foreground">
-                        {batch.average_attendance}% Attn
-                      </p>
-                    </div>
-                  </div>
+                  <BatchHealthRow key={batch.batch} batch={batch} deptAvgGpa={averageGpa} deptAvgAttn={avgAttendance} />
                 ))}
               </div>
             </article>
 
             <article className="panel">
-              <p className="text-lg font-semibold text-foreground">
-                Semester Pulse
-              </p>
-
+              <p className="text-lg font-semibold text-foreground">Semester Pulse</p>
+              <p className="text-sm text-muted-foreground">Tap a semester to see performance details.</p>
               <div className="mt-4 space-y-3">
                 {data?.semester_pulse?.map((pulse: any) => (
-                  <div key={pulse.semester} className="row-card">
-                    <div>
-                      <p className="text-sm font-semibold text-foreground">
-                        Semester {pulse.semester}
-                      </p>
-
-                      <p className="text-xs text-muted-foreground">
-                        {pulse.student_count} enrollment | {pulse.at_risk_count}{" "}
-                        flagging
-                      </p>
-                    </div>
-
-                    <div className="text-right">
-                      <p className="text-sm font-bold text-foreground">
-                        {pulse.average_gpa} avg
-                      </p>
-                    </div>
-                  </div>
+                  <SemesterPulseRow key={pulse.semester} pulse={pulse} />
                 ))}
               </div>
             </article>
@@ -2090,39 +2917,25 @@ export default function AdminDashboard() {
           <section id="faculty-impact" className="panel">
             <div className="mb-4 flex items-center justify-between">
               <div>
-                <p className="text-lg font-semibold text-foreground">
-                  Staff Impact Board
-                </p>
-
-                <p className="text-sm text-muted-foreground">
-                  Faculty performance and load snapshots.
-                </p>
+                <p className="text-lg font-semibold text-foreground">Staff Impact Board</p>
+                <p className="text-sm text-muted-foreground">Tap any faculty card for full performance analysis.</p>
               </div>
-
               <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-widest text-muted-foreground">
                 <Briefcase size={16} className="text-primary" />
-
                 <span>{data?.faculty_impact?.length || 0} entries</span>
               </div>
             </div>
 
-            <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-3">
+            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
               {(data?.faculty_impact || [])
                 .slice(0, 6)
                 .map((item: FacultyImpactMatrixItem) => (
-                  <FacultyCard
-                    key={`${item.faculty_id}-${item.subject_code}`}
-                    item={item}
-                  />
+                  <FacultyCard key={`${item.faculty_id}-${item.subject_code}`} item={item} />
                 ))}
-
               {(data?.faculty_impact?.length ?? 0) === 0 && (
                 <div className="col-span-full flex flex-col items-center justify-center gap-2 py-8 text-center border border-dashed border-border/60 rounded-2xl">
                   <Activity size={20} className="text-muted-foreground" />
-
-                  <p className="text-sm text-muted-foreground">
-                    No staff metrics available yet.
-                  </p>
+                  <p className="text-sm text-muted-foreground">No staff metrics available yet.</p>
                 </div>
               )}
             </div>
@@ -2288,15 +3101,9 @@ export default function AdminDashboard() {
               Subject Coverage Map
             </p>
 
-            <div className="mt-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+            <div className="mt-4 grid gap-3 grid-cols-2 sm:grid-cols-2 xl:grid-cols-4">
               {data?.subject_coverage?.map((item) => (
-                <div key={item.semester} className="row-card">
-                  <p className="text-sm font-bold">Sem {item.semester}</p>
-
-                  <p className="text-xs text-muted-foreground">
-                    {item.ranked_subjects}/{item.total_subjects} Ranked
-                  </p>
-                </div>
+                <SubjectCoverageRow key={item.semester} item={item} />
               ))}
             </div>
           </article>
@@ -3109,7 +3916,41 @@ export default function AdminDashboard() {
             </div>
           </div>
 
-          <article className="panel space-y-3">
+          {/* Mobile staff cards */}
+          <div className="grid gap-3 sm:hidden">
+            {(filteredStaff || []).map((s) => (
+              <div key={s.id} className="row-card flex items-center gap-3">
+                <div className="h-10 w-10 rounded-full bg-primary/10 text-primary flex items-center justify-center font-bold shrink-0">
+                  {s.name?.slice(0, 1) || s.username.slice(0, 1)}
+                </div>
+                <div className="min-w-0 flex-1">
+                  <p className="font-semibold text-foreground truncate">{s.name || s.username}</p>
+                  <p className="text-xs text-muted-foreground">{s.email || "No email"}</p>
+                  <div className="flex flex-wrap gap-1 mt-1">
+                    {s.subjects?.slice(0, 3).map((sub) => (
+                      <span key={sub.code} className="px-2 py-0.5 rounded-full bg-muted text-[10px] font-bold">{sub.code}</span>
+                    ))}
+                  </div>
+                </div>
+                <div className="flex gap-1 shrink-0">
+                  <button
+                    className="tab-chip !py-1 !px-2 text-xs"
+                    onClick={() => {
+                      setEditingStaff(s);
+                      setStaffForm({ username: s.username, name: s.name, email: s.email || "", department: s.department || "", password: "" });
+                      setStaffModalOpen(true);
+                    }}
+                  >Edit</button>
+                  <button
+                    className="tab-chip !py-1 !px-2 text-xs !bg-rose-500/10 !text-rose-600"
+                    onClick={() => setStaffToDelete(s)}
+                  >Del</button>
+                </div>
+              </div>
+            ))}
+          </div>
+
+          <article className="panel space-y-3 hidden sm:block">
             <div className="overflow-x-auto rounded-2xl border border-border/60 bg-card/60">
               <table className="w-full text-sm">
                 <thead className="bg-muted/40 text-[11px] font-black uppercase tracking-[0.16em] text-muted-foreground">
@@ -3260,118 +4101,52 @@ export default function AdminDashboard() {
         <div className="space-y-6">
           <article className="panel">
             <div className="mb-4">
-              <p className="text-lg font-semibold text-foreground">
-                Batch Attendance Overview
-              </p>
-              <p className="text-sm text-muted-foreground">
-                Average attendance percentage by batch.
-              </p>
+              <p className="text-lg font-semibold text-foreground">Batch Attendance Overview</p>
+              <p className="text-sm text-muted-foreground">Average attendance percentage by batch — tap to see details.</p>
             </div>
             <div className="grid gap-3">
               {data?.batch_health?.map((batch: any) => (
-                <div key={batch.batch} className="row-card">
-                  <div>
-                    <p className="text-sm font-semibold text-foreground">
-                      Batch {batch.batch}
-                    </p>
-                    <p className="text-xs text-muted-foreground">
-                      {batch.student_count} students
-                    </p>
-                  </div>
-                  <div className="flex items-center gap-4">
-                    <div className="w-48">
-                      <div className="h-2 w-full rounded-full bg-muted/40 overflow-hidden">
-                        <div
-                          className={`h-full transition-all ${
-                            batch.average_attendance >= 75
-                              ? "bg-emerald-500"
-                              : batch.average_attendance >= 60
-                                ? "bg-amber-500"
-                                : "bg-rose-500"
-                          }`}
-                          style={{ width: `${batch.average_attendance}%` }}
-                        />
-                      </div>
-                    </div>
-                    <p
-                      className={`font-bold w-16 text-right ${
-                        batch.average_attendance >= 75
-                          ? "text-emerald-600"
-                          : batch.average_attendance >= 60
-                            ? "text-amber-600"
-                            : "text-rose-600"
-                      }`}
-                    >
-                      {batch.average_attendance}%
-                    </p>
-                  </div>
-                </div>
+                <AttendanceBatchRow key={batch.batch} batch={batch} />
               ))}
             </div>
           </article>
 
           <article className="panel">
             <div className="mb-4">
-              <p className="text-lg font-semibold text-foreground">
-                Semester Attendance Trends
-              </p>
-              <p className="text-sm text-muted-foreground">
-                Attendance performance by semester.
-              </p>
+              <p className="text-lg font-semibold text-foreground">Semester Attendance Trends</p>
+              <p className="text-sm text-muted-foreground">Attendance performance by semester.</p>
             </div>
             {data?.semester_pulse && data.semester_pulse.length > 0 ? (
               <div className="grid gap-3">
                 {data.semester_pulse.map((pulse: any, idx: number) => (
-                  <div key={idx} className="row-card">
-                    <p className="text-sm font-semibold text-foreground">
-                      Semester {pulse.semester}
-                    </p>
-                    <p className="text-xs text-muted-foreground">
-                      {pulse.avg_attendance ?? "N/A"}% average
-                    </p>
-                  </div>
+                  <AttendanceSemesterRow key={idx} pulse={pulse} />
                 ))}
               </div>
             ) : (
-              <p className="text-sm text-muted-foreground">
-                No semester attendance data available.
-              </p>
+              <p className="text-sm text-muted-foreground">No semester attendance data available.</p>
             )}
           </article>
 
           <article className="panel">
             <div className="mb-4">
-              <p className="text-lg font-semibold text-foreground">
-                Attendance Summary
-              </p>
-              <p className="text-sm text-muted-foreground">
-                Department-wide attendance metrics.
-              </p>
+              <p className="text-lg font-semibold text-foreground">Attendance Summary</p>
+              <p className="text-sm text-muted-foreground">Department-wide attendance metrics.</p>
             </div>
-            <div className="grid grid-cols-3 gap-4">
-              <div className="space-y-1">
-                <p className="text-xs font-bold uppercase tracking-widest text-muted-foreground">
-                  Avg Attendance
-                </p>
-                <p className="text-2xl font-black text-foreground">
-                  {data?.department_health?.average_attendance ?? 0}%
-                </p>
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+              <div className="space-y-1 p-4 rounded-xl bg-muted/10 border border-border/40">
+                <p className="text-xs font-bold uppercase tracking-widest text-muted-foreground">Avg Attendance</p>
+                <p className={`text-3xl font-black ${
+                  (data?.department_health?.average_attendance ?? 0) >= 75 ? "text-emerald-600" :
+                  (data?.department_health?.average_attendance ?? 0) >= 60 ? "text-amber-600" : "text-rose-600"
+                }`}>{data?.department_health?.average_attendance ?? 0}%</p>
               </div>
-              <div className="space-y-1">
-                <p className="text-xs font-bold uppercase tracking-widest text-muted-foreground">
-                  Active Students
-                </p>
-                <p className="text-2xl font-black text-foreground">
-                  {data?.department_health?.active_students ?? 0}
-                </p>
+              <div className="space-y-1 p-4 rounded-xl bg-muted/10 border border-border/40">
+                <p className="text-xs font-bold uppercase tracking-widest text-muted-foreground">Active Students</p>
+                <p className="text-3xl font-black text-foreground">{data?.department_health?.active_students ?? 0}</p>
               </div>
-              <div className="space-y-1">
-                <p className="text-xs font-bold uppercase tracking-widest text-muted-foreground">
-                  At Risk
-                </p>
-                <p className="text-2xl font-black text-rose-600">
-                  {data?.department_health?.at_risk_count ?? 0}
-                </p>
+              <div className="space-y-1 p-4 rounded-xl bg-muted/10 border border-border/40">
+                <p className="text-xs font-bold uppercase tracking-widest text-muted-foreground">At Risk</p>
+                <p className="text-3xl font-black text-rose-600">{data?.department_health?.at_risk_count ?? 0}</p>
               </div>
             </div>
           </article>
