@@ -153,7 +153,7 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
   }, [width]);
 
   return (
-    <div className={`flex min-h-screen bg-background text-foreground transition-colors duration-300 ${isResizing ? 'cursor-col-resize' : ''}`}>
+    <div className={`flex min-h-screen overflow-x-hidden bg-background text-foreground transition-colors duration-300 ${isResizing ? 'cursor-col-resize' : ''}`}>
       {/* Sidebar for Desktop */}
       <div className="hidden lg:block flex-shrink-0" style={{ width }}>
         <Sidebar 
@@ -166,14 +166,14 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
 
       {/* Mobile Sidebar Drawer Overlay */}
       {isMobileMenuOpen && (
-        <div className="fixed inset-0 z-50 lg:hidden flex">
+        <div className="fixed inset-0 z-50 flex lg:hidden">
           {/* Backdrop Overlay */}
           <div 
             className="fixed inset-0 bg-background/80 backdrop-blur-sm transition-opacity duration-300"
             onClick={() => setIsMobileMenuOpen(false)}
           />
           {/* Sliding Panel */}
-          <div className="relative flex w-[260px] h-full flex-col bg-card animate-in slide-in-from-left duration-300 shadow-2xl border-r border-border/50">
+          <div className="relative flex h-full w-[min(82vw,300px)] flex-col border-r border-border/50 bg-card shadow-2xl animate-in slide-in-from-left duration-300">
             <Sidebar 
               role={role}
               width={260} 
@@ -185,23 +185,23 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
       )}
 
       {/* Main Content Area */}
-      <div className="flex flex-1 flex-col min-w-0 h-screen overflow-hidden">
+      <div className="flex h-screen min-w-0 flex-1 flex-col overflow-hidden">
         {/* Top Header Shell */}
-        <header className="sticky top-0 z-30 flex h-14 w-full flex-shrink-0 items-center justify-between border-b border-border/40 bg-background/80 px-4 backdrop-blur-xl md:h-16 md:px-6">
+        <header className="sticky top-0 z-30 flex min-h-14 w-full flex-shrink-0 items-center justify-between gap-3 border-b border-border/40 bg-background/85 px-3 py-2 backdrop-blur-xl sm:px-4 md:min-h-16 md:px-6">
           {/* Left: Brand & Mobile Toggle on mobile, Breadcrumb on desktop */}
-          <div className="flex items-center gap-3 min-w-0">
+          <div className="flex min-w-0 items-center gap-2 sm:gap-3">
             <button
               onClick={() => setIsMobileMenuOpen(true)}
-              className="p-1.5 rounded-xl hover:bg-muted text-muted-foreground hover:text-foreground lg:hidden flex items-center justify-center transition-colors"
+              className="flex min-h-10 min-w-10 items-center justify-center rounded-xl p-1.5 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground lg:hidden"
               aria-label="Open navigation menu"
             >
               <Menu size={20} />
             </button>
-            <span className="text-sm font-extrabold tracking-tight text-foreground md:hidden">SPARK</span>
-            <div className="hidden md:flex items-center gap-2 text-sm text-muted-foreground">
+            <span className="truncate text-sm font-extrabold tracking-tight text-foreground md:hidden">SPARK</span>
+            <div className="hidden min-w-0 items-center gap-2 text-sm text-muted-foreground md:flex">
               <span className="font-medium hover:text-foreground cursor-pointer" onClick={() => navigate('/dashboard')}>Dashboard</span>
               <ChevronRight size={14} className="opacity-40" />
-              <span className="font-semibold text-foreground">
+              <span className="truncate font-semibold text-foreground">
                 {activeTab === 'Performance' ? 'Subject Analytics' : 
                  activeTab === 'Attendance' ? 'Attendance Insight' : 
                  activeTab === 'Profile' ? 'Profile Settings' : 
@@ -214,7 +214,7 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
           </div>
 
           {/* Right: actions */}
-          <div className="flex items-center gap-2 md:gap-4 flex-shrink-0">
+          <div className="flex min-w-0 flex-shrink-0 items-center gap-1.5 sm:gap-2 md:gap-4">
             {/* Spotlight Search — admin only */}
             {role === 'admin' && (
               <SpotlightSearch onSelect={handleSpotlightSelect} />
@@ -226,12 +226,12 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
             )}
 
             {/* Search — desktop only */}
-            <div className="relative group hidden md:block">
+            <div className="relative group hidden xl:block">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground group-focus-within:text-primary transition-colors" size={16} />
               <input
                 type="text"
                 placeholder="Search metrics..."
-                className="w-56 rounded-full border border-border/50 bg-muted/30 py-1.5 pl-10 pr-4 text-sm outline-none transition-all focus:border-primary/40 focus:ring-4 focus:ring-primary/10"
+                className="w-48 rounded-full border border-border/50 bg-muted/30 py-2 pl-10 pr-4 text-sm outline-none transition-all focus:w-60 focus:border-primary/40 focus:ring-4 focus:ring-primary/10"
               />
             </div>
 
@@ -245,7 +245,7 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
             <div className="relative" ref={userMenuRef}>
               <button
                 onClick={() => setUserMenuOpen((v) => !v)}
-                className="flex items-center gap-1.5 rounded-full p-1 hover:bg-muted transition-colors"
+                className="flex min-h-10 items-center gap-1.5 rounded-full p-1 transition-colors hover:bg-muted"
               >
                 <div className="h-8 w-8 rounded-full bg-primary/10 text-primary flex items-center justify-center overflow-hidden border border-border/40">
                   {linkedinPicUrl && !linkedinImgError ? (
@@ -286,8 +286,8 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
         </header>
 
         {/* Dynamic Page Content */}
-        <main id="main-scroll" className="flex-1 overflow-y-auto custom-scrollbar">
-          <div className="w-full px-4 sm:px-6 py-6 sm:py-8 pb-28 lg:pb-8 animate-in fade-in slide-in-from-bottom-2 duration-700">
+        <main id="main-scroll" className="custom-scrollbar flex-1 overflow-y-auto overflow-x-hidden">
+          <div className="mx-auto w-full max-w-[1600px] px-3 py-4 pb-28 sm:px-5 sm:py-6 md:px-6 lg:px-8 lg:pb-8 animate-in fade-in slide-in-from-bottom-2 duration-700">
             {children}
           </div>
         </main>

@@ -67,6 +67,9 @@
 @layer base {
   :root {
     --sidebar-width: 0px;
+    --primary: #0f766e;
+    --primary-rgb: 15, 118, 110;
+    --accent: #2563eb;
     --panel: rgba(249, 252, 253, 0.9);
     --panel-strong: rgba(255, 255, 255, 0.98);
     --hero-start: #0f172a;
@@ -84,6 +87,9 @@
   }
 
   :root[data-theme='dark'] {
+    --primary: #2dd4bf;
+    --primary-rgb: 45, 212, 191;
+    --accent: #38bdf8;
     --color-background: #07141b;
     --color-foreground: #edf5f7;
     --color-card: #0d1c24;
@@ -127,6 +133,7 @@
   body {
     min-height: 100vh;
     margin: 0;
+    overflow-x: hidden;
     font-family: var(--font-sans);
     color: var(--color-foreground);
     background:
@@ -145,6 +152,22 @@
   textarea {
     font: inherit;
     color: inherit;
+  }
+
+  button,
+  [role='button'],
+  a,
+  input,
+  select,
+  textarea {
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  img,
+  svg,
+  video,
+  canvas {
+    max-width: 100%;
   }
 
   /* Custom minimal scrollbar for those who MUST have it */
@@ -169,7 +192,7 @@
 
 @layer components {
   .container-premium {
-    @apply mx-auto w-full px-4 py-6 sm:px-6 lg:px-10;
+    @apply mx-auto w-full max-w-[1600px] px-4 py-5 sm:px-6 sm:py-6 lg:px-8 xl:px-10;
   }
 
   .hide-scrollbar {
@@ -187,17 +210,21 @@
 
   .bento-grid {
     @apply grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-12;
+    min-width: 0;
   }
 
   .bento-card,
   .panel {
     background: var(--panel);
-    box-shadow: 0 12px 40px rgba(15, 35, 48, 0.08);
-    @apply rounded-[1.75rem] border border-border/70 p-6 backdrop-blur-xl;
+    box-shadow: 0 10px 28px rgba(15, 35, 48, 0.06);
+    @apply rounded-2xl border border-border/70 p-5 backdrop-blur-xl;
+    min-width: 0;
+    overflow-wrap: break-word;
   }
 
   .section-title-premium h2 {
-    @apply text-2xl font-semibold tracking-tight text-foreground;
+    @apply text-xl font-semibold tracking-tight text-foreground sm:text-2xl;
+    line-height: 1.15;
   }
 
   .section-title-premium p {
@@ -210,11 +237,12 @@
 
   .btn-primary {
     box-shadow: 0 14px 24px rgba(15, 118, 110, 0.18);
-    @apply inline-flex items-center gap-2 rounded-2xl bg-primary px-5 py-3 text-sm font-bold text-primary-foreground transition-transform hover:-translate-y-0.5 disabled:cursor-not-allowed disabled:opacity-60;
+    @apply inline-flex min-h-11 items-center justify-center gap-2 rounded-2xl bg-primary px-5 py-3 text-sm font-bold text-primary-foreground transition-transform hover:-translate-y-0.5 disabled:cursor-not-allowed disabled:opacity-60;
   }
 
   .input-field {
-    @apply rounded-2xl border border-border bg-card px-4 py-3 text-foreground outline-none transition-all focus:border-primary focus:ring-4 focus:ring-primary/10;
+    @apply min-h-11 rounded-2xl border border-border bg-card px-4 py-3 text-foreground outline-none transition-all focus:border-primary focus:ring-4 focus:ring-primary/10;
+    min-width: 0;
   }
 
   .hod-shell {
@@ -227,6 +255,7 @@
       linear-gradient(135deg, var(--hero-start), var(--hero-end));
     box-shadow: 0 20px 60px rgba(15, 23, 42, 0.28);
     @apply flex flex-col gap-6 rounded-[2rem] px-6 py-7 md:px-8 md:py-9 lg:flex-row lg:items-end lg:justify-between;
+    min-width: 0;
   }
 
   .hero-button {
@@ -242,9 +271,11 @@
   }
 
   .metric-card {
-    box-shadow: 0 10px 30px rgba(15, 35, 48, 0.08);
-    @apply rounded-[1.75rem] border border-border/70 p-5;
+    box-shadow: 0 8px 22px rgba(15, 35, 48, 0.055);
+    @apply rounded-2xl border border-border/70 p-5;
     background: linear-gradient(180deg, var(--panel-strong), var(--panel));
+    min-width: 0;
+    overflow-wrap: break-word;
   }
 
   .tone-blue {
@@ -273,7 +304,7 @@
   .action-card,
   .heat-card,
   .empty-card {
-    @apply rounded-[1.5rem] border border-border/70 bg-card/80 p-4;
+    @apply rounded-2xl border border-border/70 bg-card/80 p-4;
   }
 
   .row-card {
@@ -322,6 +353,8 @@
   .card-premium {
     box-shadow: 0 20px 50px rgba(0, 0, 0, 0.3);
     @apply transition-all duration-500 hover:-translate-y-1;
+    min-width: 0;
+    overflow-wrap: break-word;
   }
 
   .card-premium:hover {
@@ -338,13 +371,85 @@
   border-radius: 16px !important;
 }
 
+.text-gradient {
+  background: linear-gradient(135deg, var(--primary), var(--accent));
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+/* Layout hardening for mixed desktop/mobile content */
+.responsive-scroll,
+.overflow-x-auto {
+  -webkit-overflow-scrolling: touch;
+}
+
+.recharts-wrapper,
+.recharts-surface {
+  max-width: 100%;
+}
+
 /* ======================= */
 /* Mobile Responsiveness   */
 /* ======================= */
+@media (max-width: 1024px) {
+  .card-premium:hover {
+    transform: none;
+  }
+}
+
+@media (max-width: 768px) {
+  .recharts-responsive-container {
+    min-width: 0 !important;
+  }
+
+  .metric-card p.text-4xl,
+  .metric-card .text-4xl,
+  .panel .text-4xl,
+  .bento-card .text-4xl {
+    font-size: 1.875rem;
+    line-height: 2.25rem;
+  }
+
+  .text-5xl {
+    font-size: 2.25rem;
+    line-height: 2.5rem;
+  }
+}
+
 @media (max-width: 640px) {
+  body {
+    background:
+      radial-gradient(circle at top left, rgba(37, 99, 235, 0.1), transparent 18rem),
+      var(--color-background);
+  }
+
+  .container-premium {
+    padding-inline: 1rem;
+    padding-block: 1rem;
+  }
+
+  .bento-grid {
+    gap: 1rem;
+  }
+
+  .section-title-premium p {
+    line-height: 1.5;
+  }
+
+  .btn-primary {
+    width: 100%;
+    padding-inline: 1rem;
+  }
+
+  .tab-chip {
+    min-height: 2.5rem;
+    padding-inline: 0.875rem;
+  }
+
   .panel {
     padding: 1rem;
-    border-radius: 1.25rem;
+    border-radius: 1rem;
   }
 
   .hero-panel {
@@ -355,12 +460,21 @@
 
   .metric-card {
     padding: 1rem;
-    border-radius: 1.25rem;
+    border-radius: 1rem;
   }
 
-  .bento-card {
-    border-radius: 1.25rem;
+  .bento-card,
+  .card-premium {
+    border-radius: 1rem;
     padding: 1rem;
+  }
+
+  .row-card {
+    align-items: stretch;
+  }
+
+  .mini-stat {
+    padding: 0.75rem;
   }
 
   h1.text-4xl {
@@ -371,11 +485,10 @@
   h1.md\:text-5xl {
     font-size: 1.875rem;
   }
-}
 
-/* Ensure recharts containers don't overflow on mobile */
-@media (max-width: 768px) {
-  .recharts-responsive-container {
-    min-width: 0 !important;
+  .glass.rounded-\[2\.5rem\],
+  .glass-dark.rounded-\[2\.5rem\],
+  .rounded-\[2\.5rem\] {
+    border-radius: 1.5rem;
   }
 }

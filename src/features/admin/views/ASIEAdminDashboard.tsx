@@ -17,7 +17,6 @@ import {
   UserCheck
 } from "lucide-react";
 import {
-  ResponsiveContainer,
   BarChart,
   Bar,
   XAxis,
@@ -28,6 +27,7 @@ import {
   Pie,
   Legend
 } from "recharts";
+import { RobustResponsiveContainer as ResponsiveContainer } from "../../../components/RobustResponsiveContainer";
 import api from "../../../api/client";
 
 // Define TypeScript interfaces for backend responses
@@ -1188,7 +1188,7 @@ export default function ASIEAdminDashboard({ onOpenStudentProfile }: ASIEAdminDa
                   </div>
                 ) : (
                   <div className="h-80 w-full">
-                    <ResponsiveContainer width="100%" height="100%">
+                    <ResponsiveContainer width="100%" height={320}>
                       <BarChart
                         data={careerData?.distribution || []}
                         margin={{ top: 20, right: 10, left: 10, bottom: 20 }}
@@ -1244,7 +1244,7 @@ export default function ASIEAdminDashboard({ onOpenStudentProfile }: ASIEAdminDa
                 ) : (
                   <div className="flex flex-col sm:flex-row items-center justify-between gap-6">
                     <div className="h-60 w-60">
-                      <ResponsiveContainer width="100%" height="100%">
+                      <ResponsiveContainer width="100%" height={240}>
                         <PieChart>
                           <Pie
                             data={careerData?.distribution || []}

@@ -36,10 +36,10 @@ import AchievementsPanel from '../components/AchievementsPanel';
 
 const StatCard = ({ label, value, hint, icon: Icon, trend }) => (
   <div className="metric-card group overflow-hidden relative">
-    <div className="flex items-start justify-between">
-      <div>
+    <div className="flex items-start justify-between gap-3">
+      <div className="min-w-0">
         <p className="text-[11px] font-black uppercase tracking-[0.18em] text-muted-foreground">{label}</p>
-        <p className="mt-4 text-4xl font-semibold tracking-tight text-foreground">{value}</p>
+        <p className="mt-4 text-3xl font-semibold tracking-tight text-foreground sm:text-4xl">{value}</p>
       </div>
       <div className="p-3 rounded-2xl bg-primary/10 text-primary group-hover:scale-110 transition-transform">
         <Icon size={24} />
@@ -71,7 +71,7 @@ const SubjectCard = ({ subject, onManageMarks }) => (
     <h3 className="text-lg font-bold text-foreground mb-1">{subject.subject_name}</h3>
     <p className="text-sm text-muted-foreground font-mono mb-6">{subject.course_code}</p>
 
-    <div className="grid grid-cols-4 gap-2 mb-6">
+    <div className="mb-6 grid grid-cols-2 gap-2 sm:grid-cols-4">
       <div className="p-2 rounded-xl border border-border/40 bg-muted/20 text-center">
         <p className="text-[10px] text-muted-foreground font-semibold mb-1 uppercase tracking-tight">Students</p>
         <p className="text-lg font-bold">{subject.student_count}</p>
@@ -162,11 +162,11 @@ export default function StaffDashboard() {
 
   return (
     <div className="w-full pb-24 lg:pb-10 space-y-8 animate-in fade-in duration-700">
-      <header className="hero-panel px-6 lg:px-10">
-        <div className="flex flex-col md:flex-row md:items-end justify-between gap-6">
+      <header className="hero-panel px-5 sm:px-6 lg:px-10">
+        <div className="flex w-full flex-col justify-between gap-5 md:flex-row md:items-end">
           <div className="space-y-3">
             <p className="text-[11px] font-black uppercase tracking-[0.24em] text-white/70">Faculty Portal</p>
-            <h1 className="max-w-4xl text-3xl font-semibold tracking-tight text-white md:text-5xl">
+            <h1 className="max-w-4xl text-3xl font-semibold tracking-tight text-white sm:text-4xl md:text-5xl">
               Welcome back, {getGreetingName()}
             </h1>
             <p className="max-w-3xl text-sm leading-6 text-slate-300 md:text-base">
@@ -188,7 +188,7 @@ export default function StaffDashboard() {
 
       {activeTab === 'Overview' && (
         <>
-          <section className="grid gap-6 md:grid-cols-2 xl:grid-cols-4">
+          <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
             <StatCard
               label="Total Students"
               value={staff?.total_students_handled || 0}
@@ -216,14 +216,14 @@ export default function StaffDashboard() {
           </section>
 
           <section>
-            <div className="flex items-center justify-between mb-8">
+            <div className="mb-6 flex flex-col gap-2 sm:mb-8 sm:flex-row sm:items-end sm:justify-between">
               <div>
                 <h2 className="text-2xl font-bold tracking-tight">Faculty Workload</h2>
                 <p className="text-muted-foreground mt-1">Select a subject to manage student lists and internal assessments.</p>
               </div>
             </div>
 
-            <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+            <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
               {staff?.subjects?.map((subject) => (
                 <SubjectCard
                   key={subject.id}
@@ -233,7 +233,7 @@ export default function StaffDashboard() {
               ))}
 
               {staff?.subjects?.length === 0 && (
-                <div className="col-span-full py-20 bg-muted/20 border-2 border-dashed border-border rounded-[2.5rem] flex flex-col items-center justify-center text-center">
+                <div className="col-span-full flex flex-col items-center justify-center rounded-[2rem] border-2 border-dashed border-border bg-muted/20 px-5 py-16 text-center lg:rounded-[2.5rem] lg:py-20">
                   <div className="p-4 rounded-3xl bg-muted mb-4">
                     <AlertTriangle size={32} className="text-muted-foreground" />
                   </div>
@@ -244,7 +244,7 @@ export default function StaffDashboard() {
             </div>
           </section>
 
-          <section className="grid gap-6 lg:grid-cols-2">
+          <section className="grid gap-4 lg:grid-cols-2">
             <div className="panel">
               <div className="flex items-center justify-between mb-6">
                 <h3 className="text-lg font-bold">Recent Mark Revisions</h3>

@@ -75,7 +75,7 @@ const pivotAssessmentsToMarks = (assessments = []) => {
 
     // Remove automatic P grade assignment for audit courses
     // All courses (including audit) now only get grades when assessments are taken
-    
+
     const total = computeTotal(internal, examComponent);
     const grade = gradeFromTotal(total);
 

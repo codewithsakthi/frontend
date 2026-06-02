@@ -1,0 +1,29 @@
+
+> spark@0.0.0 dev
+> vite --host 127.0.0.1
+
+
+  VITE v7.3.1  ready in 638 ms
+
+  ➜  Local:   http://127.0.0.1:5173/
+  ➜  press h + enter to show help
+11:06:35 am [vite] (client) hmr update /src/index.css
+11:07:00 am [vite] (client) hmr update /src/index.css
+11:07:13 am [vite] (client) hmr update /src/index.css
+11:16:10 am [vite] (client) hmr update /src/index.css
+11:16:59 am [vite] (client) hmr update /src/index.css
+1:57:24 pm [vite] (client) hmr update /src/index.css
+1:57:36 pm [vite] (client) hmr update /src/index.css
+1:57:42 pm [vite] (client) hmr update /src/index.css
+1:57:47 pm [vite] (client) hmr update /src/index.css
+2:22:21 pm [vite] (client) hmr update /src/index.css, /src/components/DashboardLayout.tsx, /src/components/GeminiChat.jsx, /src/components/SpotlightSearch.tsx, /src/components/AICommandBar.tsx, /src/components/NotificationBell.jsx, /src/components/AchievementsPanel.jsx, /src/features/admin/views/PlacementView.tsx, /src/features/admin/views/LeaderboardView.tsx, /src/features/admin/views/RiskRadarView.tsx, /src/features/admin/views/SyllabusHODView.jsx, /src/features/admin/views/ASIEAdminDashboard.tsx, /src/components/StudentProfile360.tsx, /src/components/RAGChat.tsx, /src/components/AIStudentCoach.tsx
+3:01:46 pm [vite] (client) hmr update /src/index.css
+3:01:52 pm [vite] (client) hmr update /src/index.css, /src/features/admin/views/ASIEAdminDashboard.tsx
+3:02:07 pm [vite] (client) hmr update /src/index.css
+3:05:26 pm [vite] (client) hmr update /src/index.css
+3:05:35 pm [vite] (client) hmr update /src/index.css, /src/features/admin/views/ASIEAdminDashboard.tsx
+3:05:42 pm [vite] (client) hmr update /src/index.css
+3:06:08 pm [vite] (client) hmr update /src/index.css, /src/components/StudentProfile360.tsx
+7:20:47 pm [vite] (client) hmr update /src/index.css, /src/features/admin/views/RiskRadarView.tsx
+7:34:41 pm [vite] (client) hmr update /src/index.css, /src/features/admin/views/RiskRadarView.tsx
+7:37:43 pm [vite] (client) hmr update /src/index.css, /src/features/admin/views/RiskRadarView.tsx

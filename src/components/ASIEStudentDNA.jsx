@@ -1,9 +1,10 @@
 import React, { useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { 
-  Radar, RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis, ResponsiveContainer,
+  Radar, RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis,
   AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip
 } from 'recharts';
+import { RobustResponsiveContainer as ResponsiveContainer } from './RobustResponsiveContainer';
 import { 
   Loader2, Cpu, MessageSquare, Award, Flame, Zap, CheckCircle2, 
   HelpCircle, Compass, Star, Sparkles, TrendingUp, AlertTriangle, ShieldAlert
@@ -31,19 +32,25 @@ export default function ASIEStudentDNA({ rollNo }) {
   const radarData = useMemo(() => {
     if (!dna?.capability_scores) return [];
     const s = dna.capability_scores;
+    const score = (value) => {
+      const parsed = Number(value);
+      return Number.isFinite(parsed) ? parsed : 0;
+    };
     return [
-      { subject: 'Academics', A: parseFloat(s.academic_score) },
-      { subject: 'Technical', A: parseFloat(s.technical_score) },
-      { subject: 'Communication', A: parseFloat(s.communication_score) },
-      { subject: 'Leadership', A: parseFloat(s.leadership_score) },
-      { subject: 'Sports', A: parseFloat(s.sports_score) },
-      { subject: 'Creativity', A: parseFloat(s.creativity_score) },
-      { subject: 'Discipline', A: parseFloat(s.discipline_score) },
-      { subject: 'Consistency', A: parseFloat(s.consistency_score) },
-      { subject: 'Placement', A: parseFloat(s.placement_score) },
-      { subject: 'Growth', A: parseFloat(s.growth_score) },
+      { subject: 'Academics', A: score(s.academic_score) },
+      { subject: 'Technical', A: score(s.technical_score) },
+      { subject: 'Communication', A: score(s.communication_score) },
+      { subject: 'Leadership', A: score(s.leadership_score) },
+      { subject: 'Sports', A: score(s.sports_score) },
+      { subject: 'Creativity', A: score(s.creativity_score) },
+      { subject: 'Discipline', A: score(s.discipline_score) },
+      { subject: 'Consistency', A: score(s.consistency_score) },
+      { subject: 'Placement', A: score(s.placement_score) },
+      { subject: 'Growth', A: score(s.growth_score) },
     ];
   }, [dna]);
+
+  const hasRadarSignal = radarData.some((item) => item.A > 0);
 
   if (isLoading) {
     return (
@@ -122,14 +129,24 @@ export default function ASIEStudentDNA({ rollNo }) {
             <p className="text-xs text-muted-foreground mt-0.5">Comprehensive representation of student performance and soft-skills.</p>
           </div>
           <div className="h-80 w-full flex-1 flex items-center justify-center mt-2">
-            <ResponsiveContainer width="100%" height="100%">
-              <RadarChart cx="50%" cy="50%" outerRadius="80%" data={radarData}>
-                <PolarGrid stroke="var(--border)" strokeWidth={1} />
-                <PolarAngleAxis dataKey="subject" tick={{ fill: 'var(--muted-foreground)', fontSize: 10, fontWeight: '700' }} />
-                <PolarRadiusAxis angle={30} domain={[0, 100]} tick={{ fill: 'var(--muted-foreground)', fontSize: 8 }} />
-                <Radar name="Capability" dataKey="A" stroke="var(--primary)" fill="var(--primary)" fillOpacity={0.3} strokeWidth={3} />
-              </RadarChart>
-            </ResponsiveContainer>
+            {hasRadarSignal ? (
+              <ResponsiveContainer width="100%" height="100%">
+                <RadarChart cx="50%" cy="50%" outerRadius="80%" data={radarData}>
+                  <PolarGrid stroke="var(--border)" strokeWidth={1} />
+                  <PolarAngleAxis dataKey="subject" tick={{ fill: 'var(--muted-foreground)', fontSize: 10, fontWeight: '700' }} />
+                  <PolarRadiusAxis angle={30} domain={[0, 100]} tick={{ fill: 'var(--muted-foreground)', fontSize: 8 }} />
+                  <Radar name="Capability" dataKey="A" stroke="var(--primary)" fill="var(--primary)" fillOpacity={0.3} strokeWidth={3} />
+                </RadarChart>
+              </ResponsiveContainer>
+            ) : (
+              <div className="flex h-full w-full flex-col items-center justify-center rounded-2xl border border-dashed border-border/70 bg-muted/10 p-6 text-center">
+                <HelpCircle size={24} className="text-muted-foreground/60" />
+                <p className="mt-3 text-sm font-bold text-foreground">Capability scores pending</p>
+                <p className="mt-1 max-w-sm text-xs leading-5 text-muted-foreground">
+                  Radar data needs at least one non-zero ASIE score from academics, skills, or activity signals.
+                </p>
+              </div>
+            )}
           </div>
         </div>
 

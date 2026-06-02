@@ -38,8 +38,8 @@ import {
   PolarRadiusAxis,
   Tooltip,
   Legend,
-  ResponsiveContainer,
 } from 'recharts';
+import { RobustResponsiveContainer as ResponsiveContainer } from './RobustResponsiveContainer';
 import api from '../api/client';
 import { mapFullStudentRecord } from '../api/mappers';
 import { Student360Profile, FullStudentRecord } from '../types';
@@ -75,7 +75,7 @@ function StudentAvatar({ id, name, rollNo, size = 'h-16 w-16 text-lg font-black'
     const initials = getInitials(name);
     const bgColor = getAvatarBgColor(rollNo || name);
     return (
-      <div 
+      <div
         className={`${size} rounded-full flex items-center justify-center text-white shrink-0 shadow`}
         style={{ backgroundColor: bgColor }}
       >
@@ -105,7 +105,7 @@ const downloadWithToken = async (endpoint: string, fileName: string) => {
     const VITE_API_URL = import.meta.env.VITE_API_URL;
     const FALLBACK_URL = 'https://spark-backend-n5s2.onrender.com';
     let API_BASE = VITE_API_URL || FALLBACK_URL;
-    
+
     if (API_BASE && !API_BASE.startsWith('http')) {
       API_BASE = `https://${API_BASE}`;
     }
@@ -138,16 +138,15 @@ const downloadWithToken = async (endpoint: string, fileName: string) => {
  */
 const calculateGradFromMarks = (totalMarks: number | null | undefined): string | null => {
   if (totalMarks === null || totalMarks === undefined) return null;
-  
+
   const marks = Number(totalMarks);
-  if (marks >= 90) return 'O';
-  if (marks >= 80) return 'A+';
-  if (marks >= 70) return 'A';
-  if (marks >= 60) return 'B+';
-  if (marks >= 50) return 'B';
-  if (marks >= 40) return 'C';
-  if (marks >= 35) return 'D';
-  return 'U';
+  if (marks > 90) return 'O';
+  if (marks > 80) return 'A+';
+  if (marks > 70) return 'A';
+  if (marks > 60) return 'B+';
+  if (marks > 55) return 'B';
+  if (marks >= 50) return 'C';
+  return 'F';
 };
 
 /**
@@ -183,20 +182,23 @@ const isFailingGrade = (grade: string | null | undefined): boolean => {
  */
 const enrichGradeRecord = (record: any) => {
   if (!record) return record;
-  
+
   // Try multiple field names for total marks (API returns 'marks', but check others)
   const totalMarks = record.marks ?? record.total_marks ?? record.score ?? null;
-  
+
+  const code = (record.subject_code || record.course_code || "").toUpperCase();
+  const isAudit = code.startsWith("24AC");
+
   // Calculate grade from marks if not already set
-  const calculatedGrade = record.grade || calculateGradFromMarks(totalMarks);
-  
+  const calculatedGrade = isAudit ? null : (record.grade || calculateGradFromMarks(totalMarks));
+
   // Determine result status: PASS unless grade is U, F, or FAIL
-  const isFailGrade = calculatedGrade && ['U', 'F', 'FAIL'].includes(String(calculatedGrade).toUpperCase());
-  const resultStatus = record.result_status || (calculatedGrade ? (isFailGrade ? 'Fail' : 'Pass') : null);
-  
+  const isFailGrade = calculatedGrade && ['U', 'F', 'FAIL', 'RA'].includes(String(calculatedGrade).toUpperCase());
+  const resultStatus = record.result_status || (calculatedGrade ? (isFailGrade ? 'Fail' : 'Pass') : (isAudit && totalMarks ? (Number(totalMarks) >= 50 ? 'Pass' : 'Fail') : null));
+
   // Calculate grade point
-  const gradePoint = record.grade_point ?? getGradePoint(calculatedGrade);
-  
+  const gradePoint = isAudit ? totalMarks : (record.grade_point ?? getGradePoint(calculatedGrade));
+
   return {
     ...record,
     marks: totalMarks,
@@ -291,7 +293,7 @@ export default function StudentProfile360({ rollNo, onClose }: StudentProfile360
             <div>
               <h2 className="text-2xl sm:text-3xl font-bold tracking-tight text-foreground">{data?.student_name || rollNo}</h2>
               <p className="mt-1 text-sm text-muted-foreground">
-                <span className="font-semibold">{data?.batch}</span> • 
+                <span className="font-semibold">{data?.batch}</span> •
                 <span className="font-semibold"> Roll {rollNo}</span>
                 {data?.reg_no && <span> • Reg {data.reg_no}</span>}
               </p>
@@ -307,7 +309,7 @@ export default function StudentProfile360({ rollNo, onClose }: StudentProfile360
             </span>
             <span className="inline-flex items-center gap-1.5 rounded-full border border-amber-300/30 bg-amber-500/8 px-3 py-1 text-xs font-bold uppercase tracking-wider text-amber-600">
               <TrendingUp size={12} />
-              GPA {data?.overall_gpa.toFixed(2) || '-'}
+              GPA {data?.overall_gpa.toFixed(3) || '-'}
             </span>
           </div>
         </div>
@@ -341,11 +343,10 @@ export default function StudentProfile360({ rollNo, onClose }: StudentProfile360
                 <Award size={18} className="text-violet-500" />
                 <p className="text-sm font-bold text-foreground">Professional Identity</p>
                 {data.career_readiness?.readiness_band && (
-                  <span className={`ml-auto inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wider ${
-                    data.career_readiness.readiness_band === 'Ready' ? 'bg-emerald-500/10 text-emerald-600 ring-1 ring-emerald-500/20' :
-                    data.career_readiness.readiness_band === 'Near Ready' ? 'bg-amber-500/10 text-amber-600 ring-1 ring-amber-500/20' :
-                    'bg-rose-500/10 text-rose-600 ring-1 ring-rose-500/20'
-                  }`}>
+                  <span className={`ml-auto inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wider ${data.career_readiness.readiness_band === 'Ready' ? 'bg-emerald-500/10 text-emerald-600 ring-1 ring-emerald-500/20' :
+                      data.career_readiness.readiness_band === 'Near Ready' ? 'bg-amber-500/10 text-amber-600 ring-1 ring-amber-500/20' :
+                        'bg-rose-500/10 text-rose-600 ring-1 ring-rose-500/20'
+                    }`}>
                     {data.career_readiness.readiness_band}
                   </span>
                 )}
@@ -389,7 +390,15 @@ export default function StudentProfile360({ rollNo, onClose }: StudentProfile360
                             if (!resp.ok) { alert('Uploaded resume not found'); return; }
                             const blob = await resp.blob();
                             const url = window.URL.createObjectURL(blob);
-                            window.open(url, '_blank');
+
+                            // Use HTML5 anchor tag click to download/view on mobile standalone PWAs
+                            const a = document.createElement('a');
+                            a.href = url;
+                            a.download = `${data.roll_no}-uploaded-resume.pdf`;
+                            document.body.appendChild(a);
+                            a.click();
+                            document.body.removeChild(a);
+
                             setTimeout(() => window.URL.revokeObjectURL(url), 60000);
                           } catch { alert('Failed to load resume'); }
                         }}
@@ -480,9 +489,8 @@ export default function StudentProfile360({ rollNo, onClose }: StudentProfile360
                             <p className="text-[10px] text-muted-foreground">{p.tech_stack.join(', ')}</p>
                           )}
                         </div>
-                        <span className={`ml-2 shrink-0 rounded-full px-2 py-0.5 text-[9px] font-bold uppercase ${
-                          p.completion_status === 'completed' ? 'bg-emerald-500/10 text-emerald-600' : 'bg-amber-500/10 text-amber-600'
-                        }`}>{p.completion_status}</span>
+                        <span className={`ml-2 shrink-0 rounded-full px-2 py-0.5 text-[9px] font-bold uppercase ${p.completion_status === 'completed' ? 'bg-emerald-500/10 text-emerald-600' : 'bg-amber-500/10 text-amber-600'
+                          }`}>{p.completion_status}</span>
                       </div>
                     ))}
                   </div>
@@ -568,11 +576,10 @@ export default function StudentProfile360({ rollNo, onClose }: StudentProfile360
                 ] as const).map(([label, score]) => (
                   <div key={label} className="rounded-lg border border-border/30 bg-card/30 p-3 text-center">
                     <p className="text-[9px] font-bold uppercase tracking-wider text-muted-foreground">{label}</p>
-                    <p className={`mt-1 text-lg font-black ${
-                      score != null && score >= 75 ? 'text-emerald-500' :
-                      score != null && score >= 50 ? 'text-amber-500' :
-                      'text-muted-foreground'
-                    }`}>{score != null ? score.toFixed(0) : '—'}</p>
+                    <p className={`mt-1 text-lg font-black ${score != null && score >= 75 ? 'text-emerald-500' :
+                        score != null && score >= 50 ? 'text-amber-500' :
+                          'text-muted-foreground'
+                      }`}>{score != null ? score.toFixed(0) : '—'}</p>
                   </div>
                 ))}
               </div>
@@ -589,41 +596,36 @@ export default function StudentProfile360({ rollNo, onClose }: StudentProfile360
           {/* ADMIN CRITICAL STATUS - TOP PRIORITY */}
           <section className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
             {/* Risk Level */}
-            <article className={`rounded-2xl border p-4 ${
-              data.risk_level === 'Critical' ? 'border-rose-300/40 bg-gradient-to-br from-rose-500/12 to-transparent' :
-              data.risk_level === 'High' ? 'border-amber-300/40 bg-gradient-to-br from-amber-500/12 to-transparent' :
-              data.risk_level === 'Moderate' ? 'border-blue-300/40 bg-gradient-to-br from-blue-500/12 to-transparent' :
-              'border-emerald-300/40 bg-gradient-to-br from-emerald-500/12 to-transparent'
-            }`}>
+            <article className={`rounded-2xl border p-4 ${data.risk_level === 'Critical' ? 'border-rose-300/40 bg-gradient-to-br from-rose-500/12 to-transparent' :
+                data.risk_level === 'High' ? 'border-amber-300/40 bg-gradient-to-br from-amber-500/12 to-transparent' :
+                  data.risk_level === 'Moderate' ? 'border-blue-300/40 bg-gradient-to-br from-blue-500/12 to-transparent' :
+                    'border-emerald-300/40 bg-gradient-to-br from-emerald-500/12 to-transparent'
+              }`}>
               <p className="text-xs font-black uppercase tracking-widest text-muted-foreground">Risk Assessment</p>
-              <p className={`mt-3 text-3xl font-black ${
-                data.risk_level === 'Critical' ? 'text-rose-600' :
-                data.risk_level === 'High' ? 'text-amber-600' :
-                data.risk_level === 'Moderate' ? 'text-blue-600' :
-                'text-emerald-600'
-              }`}>{data.risk_level}</p>
+              <p className={`mt-3 text-3xl font-black ${data.risk_level === 'Critical' ? 'text-rose-600' :
+                  data.risk_level === 'High' ? 'text-amber-600' :
+                    data.risk_level === 'Moderate' ? 'text-blue-600' :
+                      'text-emerald-600'
+                }`}>{data.risk_level}</p>
               <p className="mt-2 text-xs text-muted-foreground">Based on CGPA, attendance, backlogs</p>
             </article>
 
             {/* Placement Ready */}
-            <article className={`rounded-2xl border p-4 ${
-              data.placement_signal === 'Placement Ready'
+            <article className={`rounded-2xl border p-4 ${data.placement_signal === 'Placement Ready'
                 ? 'border-emerald-300/40 bg-gradient-to-br from-emerald-500/12 to-transparent'
                 : 'border-amber-300/40 bg-gradient-to-br from-amber-500/12 to-transparent'
-            }`}>
+              }`}>
               <p className="text-xs font-black uppercase tracking-widest text-muted-foreground">Placement Status</p>
-              <p className={`mt-3 text-2xl font-black ${
-                data.placement_signal === 'Placement Ready' ? 'text-emerald-600' : 'text-amber-600'
-              }`}>{data.placement_signal}</p>
+              <p className={`mt-3 text-2xl font-black ${data.placement_signal === 'Placement Ready' ? 'text-emerald-600' : 'text-amber-600'
+                }`}>{data.placement_signal}</p>
               <p className="mt-2 text-xs text-muted-foreground">{data.attendance_band} attendance</p>
             </article>
 
             {/* Active Arrears */}
-            <article className={`rounded-2xl border p-4 ${
-              data.active_arrears > 0
+            <article className={`rounded-2xl border p-4 ${data.active_arrears > 0
                 ? 'border-rose-300/40 bg-gradient-to-br from-rose-500/12 to-transparent'
                 : 'border-emerald-300/40 bg-gradient-to-br from-emerald-500/12 to-transparent'
-            }`}>
+              }`}>
               <p className="text-xs font-black uppercase tracking-widest text-muted-foreground">Active Backlogs</p>
               <p className={`mt-3 text-3xl font-black ${data.active_arrears > 0 ? 'text-rose-600' : 'text-emerald-600'}`}>
                 {data.active_arrears}
@@ -636,7 +638,7 @@ export default function StudentProfile360({ rollNo, onClose }: StudentProfile360
           <section className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
             <article className="rounded-xl border border-border/40 bg-card/40 p-4">
               <p className="text-xs font-semibold uppercase text-muted-foreground">Overall GPA</p>
-              <p className="mt-3 text-3xl font-bold text-foreground">{data.overall_gpa.toFixed(2)}</p>
+              <p className="mt-3 text-3xl font-bold text-foreground">{data.overall_gpa.toFixed(3)}</p>
               <p className="mt-1 text-xs text-muted-foreground">Cumulative: {data.gpa_trend} trend</p>
             </article>
 
@@ -674,7 +676,7 @@ export default function StudentProfile360({ rollNo, onClose }: StudentProfile360
               const problemSubjects = gradedSubjects.filter((g) => isFailingGrade(g.grade));
               const failCount = problemSubjects.length;
               const passRate = gradedSubjects.length > 0 ? Math.round((passCount / gradedSubjects.length) * 100) : 0;
-              const avgInternal = semGrades.length > 0 
+              const avgInternal = semGrades.length > 0
                 ? Math.round(semGrades.reduce((sum, g) => sum + (g.internal_marks || 0), 0) / semGrades.length)
                 : 0;
 
@@ -703,13 +705,12 @@ export default function StudentProfile360({ rollNo, onClose }: StudentProfile360
                           const count = semGrades.filter((g) => g.grade === grade).length;
                           if (count === 0) return null;
                           return (
-                            <span key={grade} className={`rounded px-2 py-1 font-semibold ${
-                              grade === 'O' ? 'bg-emerald-500/20 text-emerald-700' :
-                              grade === 'A+' || grade === 'A' ? 'bg-blue-500/20 text-blue-700' :
-                              grade === 'B+' || grade === 'B' ? 'bg-amber-500/20 text-amber-700' :
-                              grade === 'C+' || grade === 'C' ? 'bg-yellow-500/20 text-yellow-700' :
-                              'bg-slate-500/20 text-slate-700'
-                            }`}>
+                            <span key={grade} className={`rounded px-2 py-1 font-semibold ${grade === 'O' ? 'bg-emerald-500/20 text-emerald-700' :
+                                grade === 'A+' || grade === 'A' ? 'bg-blue-500/20 text-blue-700' :
+                                  grade === 'B+' || grade === 'B' ? 'bg-amber-500/20 text-amber-700' :
+                                    grade === 'C+' || grade === 'C' ? 'bg-yellow-500/20 text-yellow-700' :
+                                      'bg-slate-500/20 text-slate-700'
+                              }`}>
                               {grade}:{count}
                             </span>
                           );
@@ -724,10 +725,10 @@ export default function StudentProfile360({ rollNo, onClose }: StudentProfile360
                       <p className="mb-2 text-xs font-semibold text-rose-600">⚠️ Problem Subjects ({failCount})</p>
                       <div className="flex flex-wrap gap-2">
                         {problemSubjects.map((g) => (
-                            <span key={`${g.subject_code}-problem`} className="rounded bg-rose-500/10 px-2.5 py-1 text-xs font-medium text-rose-700">
-                              {g.subject_code} ({g.grade})
-                            </span>
-                          ))}
+                          <span key={`${g.subject_code}-problem`} className="rounded bg-rose-500/10 px-2.5 py-1 text-xs font-medium text-rose-700">
+                            {g.subject_code} ({g.grade})
+                          </span>
+                        ))}
                       </div>
                     </div>
                   )}
@@ -745,18 +746,16 @@ export default function StudentProfile360({ rollNo, onClose }: StudentProfile360
             <div className="space-y-2.5">
               {data.recommended_actions.length > 0 ? (
                 data.recommended_actions.map((action, idx) => (
-                  <div key={action} className={`flex gap-3 rounded-lg border p-3.5 ${
-                    idx === 0
+                  <div key={action} className={`flex gap-3 rounded-lg border p-3.5 ${idx === 0
                       ? 'border-rose-300/40 bg-gradient-to-r from-rose-500/12 to-transparent'
                       : idx === 1
                         ? 'border-amber-300/40 bg-gradient-to-r from-amber-500/12 to-transparent'
                         : 'border-blue-300/40 bg-gradient-to-r from-blue-500/12 to-transparent'
-                  }`}>
-                    <div className={`flex-shrink-0 flex h-8 w-8 items-center justify-center rounded-lg font-bold text-sm ${
-                      idx === 0 ? 'bg-rose-500/20 text-rose-700' :
-                      idx === 1 ? 'bg-amber-500/20 text-amber-700' :
-                      'bg-blue-500/20 text-blue-700'
                     }`}>
+                    <div className={`flex-shrink-0 flex h-8 w-8 items-center justify-center rounded-lg font-bold text-sm ${idx === 0 ? 'bg-rose-500/20 text-rose-700' :
+                        idx === 1 ? 'bg-amber-500/20 text-amber-700' :
+                          'bg-blue-500/20 text-blue-700'
+                      }`}>
                       {idx === 0 ? '🔴' : idx === 1 ? '🟡' : '🔵'}
                     </div>
                     <p className="text-sm leading-6 text-foreground pt-0.5">{action}</p>
@@ -801,9 +800,10 @@ export default function StudentProfile360({ rollNo, onClose }: StudentProfile360
               (() => {
                 const sem = Number(selectedTranscriptSem);
                 const semGrades = allSemGrades.filter((g) => Number(g.semester) === sem);
-                // Calculate weighted SGPA: SUM(grade_point * credits) / SUM(credits) 
-                const totalWeightedPoints = semGrades.reduce((sum, g) => sum + ((g.grade_point || 0) * (g.credits || 0)), 0);
-                const totalCredits = semGrades.reduce((sum, g) => sum + (g.credits || 0), 0);
+                // Calculate weighted SGPA: SUM(grade_point * credits) / SUM(credits) only for subjects with grades
+                const gradedSemGrades = semGrades.filter((g) => g.grade !== null && g.grade !== undefined && String(g.grade).trim() !== '');
+                const totalWeightedPoints = gradedSemGrades.reduce((sum, g) => sum + ((g.grade_point || 0) * (g.credits || 0)), 0);
+                const totalCredits = gradedSemGrades.reduce((sum, g) => sum + (g.credits || 0), 0);
                 const semesterGPA = totalCredits > 0 ? (totalWeightedPoints / totalCredits).toFixed(3) : '0.000';
 
                 return (
@@ -845,7 +845,8 @@ export default function StudentProfile360({ rollNo, onClose }: StudentProfile360
                           <tbody>
                             {semGrades.map((grade, idx) => {
                               const internalMarks = grade.internal_marks !== null && grade.internal_marks !== undefined ? Math.round(grade.internal_marks) : null;
-                              const resultStatus = grade.result_status || (grade.grade && isFailingGrade(grade.grade) ? 'Fail' : 'Pass');
+                              const isPastSemester = data?.current_semester && Number(grade.semester) < Number(data.current_semester);
+                              const resultStatus = grade.result_status || (grade.grade ? (isFailingGrade(grade.grade) ? 'Fail' : 'Pass') : (isPastSemester ? 'Arrear' : '—'));
                               return (
                                 <tr key={`${grade.subject_code}-${selectedTranscriptSem}`} className="border-b border-border/30 hover:bg-muted/20">
                                   <td className="px-3 py-2.5 text-foreground font-medium">{idx + 1}</td>
@@ -882,13 +883,13 @@ export default function StudentProfile360({ rollNo, onClose }: StudentProfile360
                             <div>
                               <p className="text-xs font-semibold text-muted-foreground uppercase">Sum of (Credit × Grade Point)</p>
                               <p className="mt-1 text-xl font-black text-foreground">
-                                {(semGrades.reduce((sum, g) => sum + ((g.credits || 0) * (g.grade_point || 0)), 0)).toFixed(3)}
+                                {totalWeightedPoints.toFixed(3)}
                               </p>
                             </div>
                             <div>
                               <p className="text-xs font-semibold text-muted-foreground uppercase">Sum of Credit</p>
                               <p className="mt-1 text-xl font-black text-foreground">
-                                {(semGrades.reduce((sum, g) => sum + (g.credits || 0), 0)).toFixed(2)}
+                                {totalCredits.toFixed(2)}
                               </p>
                             </div>
                             <div>
@@ -913,11 +914,11 @@ export default function StudentProfile360({ rollNo, onClose }: StudentProfile360
                       });
 
                       const testNumbers = Object.keys(citsByTest).map(Number).sort();
-                      
+
                       if (testNumbers.length === 0) return null;
 
                       const selectedTestMarks = citsByTest[selectedCIT || testNumbers[0]] || [];
-                      const avgMark = selectedTestMarks.length > 0 
+                      const avgMark = selectedTestMarks.length > 0
                         ? (selectedTestMarks.reduce((sum, m) => sum + (m.percentage || 0), 0) / selectedTestMarks.length).toFixed(2)
                         : '0.00';
 
@@ -989,7 +990,7 @@ export default function StudentProfile360({ rollNo, onClose }: StudentProfile360
                 <div className="flex items-end justify-between">
                   <div>
                     <p className="text-xs font-semibold uppercase text-muted-foreground">Overall Cumulative GPA</p>
-                    <p className="mt-2 text-4xl font-black text-primary">{data?.overall_gpa.toFixed(2)}</p>
+                    <p className="mt-2 text-4xl font-black text-primary">{data?.overall_gpa.toFixed(3)}</p>
                   </div>
                   <div className="text-right">
                     <p className="text-xs text-muted-foreground">Across {semesterOptions.length} semester{semesterOptions.length !== 1 ? 's' : ''}</p>
@@ -1012,7 +1013,7 @@ export default function StudentProfile360({ rollNo, onClose }: StudentProfile360
                     const sgpa = totalCredits > 0 ? totalWeightedPoints / totalCredits : 0;
                     return {
                       semester: `Sem ${sem}`,
-                      SGPA: parseFloat(sgpa.toFixed(2)),
+                      SGPA: parseFloat(sgpa.toFixed(3)),
                     };
                   });
 
@@ -1024,7 +1025,7 @@ export default function StudentProfile360({ rollNo, onClose }: StudentProfile360
                           <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" strokeOpacity={0.3} />
                           <XAxis dataKey="semester" stroke="var(--muted-foreground)" tick={{ fill: 'var(--muted-foreground)' }} />
                           <YAxis stroke="var(--muted-foreground)" domain={[0, 10]} tick={{ fill: 'var(--muted-foreground)' }} />
-                          <Tooltip 
+                          <Tooltip
                             contentStyle={{
                               backgroundColor: 'var(--card)',
                               border: '1px solid var(--border)',
@@ -1034,10 +1035,10 @@ export default function StudentProfile360({ rollNo, onClose }: StudentProfile360
                             labelStyle={{ color: 'var(--muted-foreground)' }}
                           />
                           <Legend />
-                          <Line 
-                            type="monotone" 
-                            dataKey="SGPA" 
-                            stroke="#3b82f6" 
+                          <Line
+                            type="monotone"
+                            dataKey="SGPA"
+                            stroke="#3b82f6"
                             strokeWidth={2}
                             dot={{ fill: '#3b82f6', r: 5 }}
                             activeDot={{ r: 7 }}
@@ -1076,7 +1077,7 @@ export default function StudentProfile360({ rollNo, onClose }: StudentProfile360
                           <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" strokeOpacity={0.3} />
                           <XAxis dataKey="name" stroke="var(--muted-foreground)" tick={{ fill: 'var(--muted-foreground)' }} />
                           <YAxis stroke="var(--muted-foreground)" domain={[0, 100]} tick={{ fill: 'var(--muted-foreground)' }} />
-                          <Tooltip 
+                          <Tooltip
                             contentStyle={{
                               backgroundColor: 'var(--card)',
                               border: '1px solid var(--border)',
@@ -1140,7 +1141,7 @@ export default function StudentProfile360({ rollNo, onClose }: StudentProfile360
                               <Cell key={`cell-${index}`} fill={gradeColorMap[entry.name] || '#6b7280'} />
                             ))}
                           </Pie>
-                          <Tooltip 
+                          <Tooltip
                             contentStyle={{
                               backgroundColor: 'var(--card)',
                               border: '1px solid var(--border)',
@@ -1180,33 +1181,33 @@ export default function StudentProfile360({ rollNo, onClose }: StudentProfile360
                       <div className="relative flex items-center justify-center">
                         <div className="w-full max-w-[450px] aspect-square">
                           <ResponsiveContainer width="100%" height="100%">
-                            <RadarChart 
-                              data={data.skill_domains} 
+                            <RadarChart
+                              data={data.skill_domains}
                               margin={{ top: 40, right: 40, bottom: 40, left: 40 }}
                             >
                               <defs>
                                 <linearGradient id="studentGradient" x1="0" y1="0" x2="0" y2="1">
-                                  <stop offset="5%" stopColor="#06b6d4" stopOpacity={0.6}/>
-                                  <stop offset="95%" stopColor="#06b6d4" stopOpacity={0.1}/>
+                                  <stop offset="5%" stopColor="#06b6d4" stopOpacity={0.6} />
+                                  <stop offset="95%" stopColor="#06b6d4" stopOpacity={0.1} />
                                 </linearGradient>
                                 <linearGradient id="cohortGradient" x1="0" y1="0" x2="0" y2="1">
-                                  <stop offset="5%" stopColor="#f59e0b" stopOpacity={0.3}/>
-                                  <stop offset="95%" stopColor="#f59e0b" stopOpacity={0.05}/>
+                                  <stop offset="5%" stopColor="#f59e0b" stopOpacity={0.3} />
+                                  <stop offset="95%" stopColor="#f59e0b" stopOpacity={0.05} />
                                 </linearGradient>
                               </defs>
                               <PolarGrid stroke="var(--border)" strokeOpacity={0.5} gridType="polygon" />
-                              <PolarAngleAxis 
-                                dataKey="domain" 
-                                stroke="var(--foreground)" 
+                              <PolarAngleAxis
+                                dataKey="domain"
+                                stroke="var(--foreground)"
                                 tick={{ fontSize: 11, fontWeight: 700, fill: 'var(--muted-foreground)' }}
                               />
-                              <PolarRadiusAxis 
-                                angle={90} 
-                                domain={[0, 100]} 
-                                axisLine={false} 
-                                tick={false} 
+                              <PolarRadiusAxis
+                                angle={90}
+                                domain={[0, 100]}
+                                axisLine={false}
+                                tick={false}
                               />
-                              
+
                               {/* Class Average Series */}
                               <Radar
                                 name="Class Average"
@@ -1230,7 +1231,7 @@ export default function StudentProfile360({ rollNo, onClose }: StudentProfile360
                                 activeDot={{ r: 6, strokeWidth: 0 }}
                               />
 
-                              <Tooltip 
+                              <Tooltip
                                 cursor={false}
                                 content={({ active, payload }) => {
                                   if (active && payload && payload.length) {
@@ -1272,7 +1273,7 @@ export default function StudentProfile360({ rollNo, onClose }: StudentProfile360
                         {data.skill_domains.map((item) => {
                           const diff = item.score - (item.cohort_score || 0);
                           const isBetter = diff >= 0;
-                          
+
                           return (
                             <div key={item.domain} className="group relative overflow-hidden rounded-xl border border-border/40 bg-muted/20 p-2.5 transition-all hover:bg-muted/30">
                               <div className="absolute left-0 top-0 h-full w-1 transition-all group-hover:w-1.5" style={{ backgroundColor: isBetter ? '#10b981' : '#f43f5e' }}></div>
@@ -1281,9 +1282,8 @@ export default function StudentProfile360({ rollNo, onClose }: StudentProfile360
                                   <p className="truncate text-[10px] font-black uppercase tracking-wider text-muted-foreground/80">{item.domain}</p>
                                   <div className="mt-0.5 flex items-baseline gap-2">
                                     <p className="text-lg font-black text-foreground">{item.score.toFixed(1)}%</p>
-                                    <div className={`flex items-center gap-0.5 rounded-full px-1.5 py-0.5 text-[9px] font-bold shadow-sm ${
-                                      isBetter ? 'bg-emerald-500/10 text-emerald-600 ring-1 ring-emerald-500/20' : 'bg-rose-500/10 text-rose-600 ring-1 ring-rose-500/20'
-                                    }`}>
+                                    <div className={`flex items-center gap-0.5 rounded-full px-1.5 py-0.5 text-[9px] font-bold shadow-sm ${isBetter ? 'bg-emerald-500/10 text-emerald-600 ring-1 ring-emerald-500/20' : 'bg-rose-500/10 text-rose-600 ring-1 ring-rose-500/20'
+                                      }`}>
                                       {isBetter ? '+' : ''}{diff.toFixed(1)}% {isBetter ? '↑' : '↓'}
                                     </div>
                                   </div>
@@ -1344,15 +1344,13 @@ export default function StudentProfile360({ rollNo, onClose }: StudentProfile360
                 <p className="text-xs font-semibold uppercase text-muted-foreground">Emergency Phone</p>
                 <p className="mt-2 text-sm font-medium text-foreground">{record?.family_details?.emergency_contact_phone || record?.family_details?.parent_phone || '—'}</p>
               </div>
-              <div className={`rounded-lg border p-4 ${
-                (record?.record_health?.completion_percentage || 0) > 50
+              <div className={`rounded-lg border p-4 ${(record?.record_health?.completion_percentage || 0) > 50
                   ? 'border-emerald-300/40 bg-gradient-to-br from-emerald-500/12 to-transparent'
                   : 'border-amber-300/40 bg-gradient-to-br from-amber-500/12 to-transparent'
-              }`}>
+                }`}>
                 <p className="text-xs font-semibold uppercase text-muted-foreground">Record Completeness</p>
-                <p className={`mt-2 text-sm font-bold ${
-                  (record?.record_health?.completion_percentage || 0) > 50 ? 'text-emerald-600' : 'text-amber-600'
-                }`}>{record?.record_health?.completion_percentage || 0}%</p>
+                <p className={`mt-2 text-sm font-bold ${(record?.record_health?.completion_percentage || 0) > 50 ? 'text-emerald-600' : 'text-amber-600'
+                  }`}>{record?.record_health?.completion_percentage || 0}%</p>
               </div>
             </div>
             <div className="mt-6 flex flex-wrap gap-2">
@@ -1360,20 +1358,20 @@ export default function StudentProfile360({ rollNo, onClose }: StudentProfile360
                 type="button"
                 className="hero-button !text-foreground !border-border !bg-card"
                 onClick={() => downloadWithToken(`admin/export/resume/${data.roll_no}.pdf`, `${data.roll_no}-resume.pdf`)}
-                >
-                  <Download size={16} />
-                  Download Resume
-                </button>
-                <button
-                  type="button"
-                  className="hero-button !text-foreground !border-border !bg-card"
-                  onClick={() => downloadWithToken(`admin/exports/grade-sheet/${data.roll_no}.pdf`, `${data.roll_no}-grade-sheet.pdf`)}
-                >
-                  <Download size={16} />
-                  PDF Grade Sheet
-                </button>
-              </div>
-            </section>
+              >
+                <Download size={16} />
+                Download Resume
+              </button>
+              <button
+                type="button"
+                className="hero-button !text-foreground !border-border !bg-card"
+                onClick={() => downloadWithToken(`admin/exports/grade-sheet/${data.roll_no}.pdf`, `${data.roll_no}-grade-sheet.pdf`)}
+              >
+                <Download size={16} />
+                PDF Grade Sheet
+              </button>
+            </div>
+          </section>
         </div>
       ) : null}
     </aside>

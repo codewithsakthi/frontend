@@ -297,8 +297,16 @@ export default function ProfessionalProfilePage() {
 
       const blob = await resp.blob();
       const objectUrl = URL.createObjectURL(blob);
-      window.open(objectUrl, '_blank', 'noopener,noreferrer');
-      setTimeout(() => URL.revokeObjectURL(objectUrl), 30_000);
+      
+      // Use anchor tag fallback to work seamlessly inside standalone PWA containers on mobile
+      const a = document.createElement('a');
+      a.href = objectUrl;
+      a.download = profile?.resume_file_path?.split('/').pop() || 'resume.pdf';
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      
+      setTimeout(() => URL.revokeObjectURL(objectUrl), 60_000);
       setUploadStatus(null);
     } catch (err: any) {
       setUploadStatus(`Unable to open resume: ${err?.message || 'Unknown error'}`);

@@ -72,6 +72,43 @@ const groupSemesterTrend = (semesterGrades = []) => {
     .sort((a, b) => a.semester - b.semester);
 };
 
+const groupSemesterTrendFromMarks = (marks = []) => {
+  const grouped = filterGradedSubjects(marks).reduce((acc, item) => {
+    const semester = Number(item.semester || 0);
+    if (!semester) return acc;
+
+    if (!acc[semester]) {
+      acc[semester] = { gradePoints: [], internals: [], failures: 0, entries: 0 };
+    }
+
+    const gp = gradePointFor(item);
+    if (gp > 0) {
+      acc[semester].gradePoints.push(gp);
+    }
+    if (item.internal_marks !== null && item.internal_marks !== undefined && Number.isFinite(Number(item.internal_marks))) {
+      acc[semester].internals.push(Number(item.internal_marks));
+    }
+    if (FAIL_GRADES.has(normalizeGrade(item.grade))) {
+      acc[semester].failures += 1;
+    }
+    acc[semester].entries += 1;
+    return acc;
+  }, {});
+
+  return Object.entries(grouped)
+    .map(([semester, values]) => ({
+      semester: Number(semester),
+      label: `Sem ${semester}`,
+      averageGradePoints: round(avg(values.gradePoints)),
+      averageInternal: round(avg(values.internals)),
+      failCount: values.failures,
+      passCount: values.entries - values.failures,
+      entries: values.entries,
+    }))
+    .filter((item) => item.averageGradePoints > 0 || item.averageInternal > 0)
+    .sort((a, b) => a.semester - b.semester);
+};
+
 const buildStudentStrengths = (record) => {
   const semesterGrades = filterGradedSubjects(record?.semester_grades || []);
   const ordered = [...semesterGrades].sort((a, b) => gradePointFor(b) - gradePointFor(a));
@@ -87,14 +124,20 @@ const buildStudentStrengths = (record) => {
 export const buildStudentIntelligence = (student, record) => {
   // Use pre-calculated semester performance from backend
   // Map snake_case from backend to camelCase and add labels for the frontend AreaChart
-  const semesterTrend = (record?.semester_performance || []).map(item => ({
-    ...item,
-    semester: Number(item.semester),
-    label: `Sem ${item.semester}`,
-    averageGradePoints: Number(item.average_grade_points || 0),
-    averageInternal: Number(item.average_internal || 0),
-    failCount: Number(item.backlog_count || 0),
-  })).sort((a, b) => a.semester - b.semester);
+  const backendSemesterTrend = (record?.semester_performance || [])
+    .filter(item => item.average_grade_points !== null && item.average_grade_points !== undefined && Number(item.average_grade_points) > 0)
+    .map(item => ({
+      ...item,
+      semester: Number(item.semester),
+      label: `Sem ${item.semester}`,
+      averageGradePoints: Number(item.average_grade_points || 0),
+      averageInternal: Number(item.average_internal || 0),
+      failCount: Number(item.backlog_count || 0),
+    })).sort((a, b) => a.semester - b.semester);
+
+  const semesterTrend = backendSemesterTrend.length
+    ? backendSemesterTrend
+    : groupSemesterTrendFromMarks(record?.marks || record?.semester_grades || []);
 
   const latest = semesterTrend[semesterTrend.length - 1];
   const previous = semesterTrend[semesterTrend.length - 2];

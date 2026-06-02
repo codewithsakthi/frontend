@@ -7,9 +7,10 @@ import {
 } from 'lucide-react';
 import { useRealTimeAttendance } from '../hooks/useRealTimeAttendance';
 import {
-  ResponsiveContainer, AreaChart, XAxis, YAxis, CartesianGrid, Tooltip, Area,
+  AreaChart, XAxis, YAxis, CartesianGrid, Tooltip, Area,
   BarChart, Bar, Cell, PieChart, Pie
 } from 'recharts';
+import { RobustResponsiveContainer as ResponsiveContainer } from '../components/RobustResponsiveContainer';
 import { useAuthStore } from '../store/authStore';
 import { useThemeStore } from '../store/themeStore';
 import { SectionTitle, StatCard, SortHeader } from '../components/DashboardComponents';
@@ -23,6 +24,14 @@ import ProfessionalProfilePage from '../features/professional-identity/pages/Pro
 import AchievementsPanel from '../components/AchievementsPanel';
 
 // Redundant component definitions removed - imported from DashboardComponents
+
+const ChartEmptyState = ({ title = 'Data pending', copy = 'This view will populate after academic records are synced.' }) => (
+  <div className="flex h-full min-h-40 flex-col items-center justify-center rounded-2xl border border-dashed border-border/70 bg-muted/10 p-6 text-center">
+    <Info size={22} className="text-muted-foreground/60" />
+    <p className="mt-3 text-sm font-bold text-foreground">{title}</p>
+    <p className="mt-1 max-w-sm text-xs leading-5 text-muted-foreground">{copy}</p>
+  </div>
+);
 
 const Dashboard = () => {
   const { user, logout, updateUser } = useAuthStore();
@@ -219,9 +228,9 @@ const Dashboard = () => {
       sumCpGp += credits * Number(gp);
     });
 
-    const cgpa = sumCp > 0 ? Number((sumCpGp / sumCp).toFixed(2)) : 0;
+    const cgpa = sumCp > 0 ? Number((sumCpGp / sumCp).toFixed(3)) : 0;
     return {
-      sumCpGp: Number(sumCpGp.toFixed(2)),
+      sumCpGp: Number(sumCpGp.toFixed(3)),
       sumCp: Number(sumCp.toFixed(2)),
       cgpa,
       gradedCount,
@@ -249,6 +258,93 @@ const Dashboard = () => {
     return Object.entries(dist).map(([name, value]) => ({ name, value }));
   }, [marks]);
 
+  const assessmentChartData = useMemo(() => (
+    marks
+      .filter((mark) => Number.isFinite(Number(mark.internal_marks ?? mark.total_marks)))
+      .slice(-6)
+      .map((mark) => ({
+        ...mark,
+        chartLabel: mark.subject?.course_code || mark.subject?.name || `Sem ${mark.semester || '-'}`,
+        chartMarks: Number(mark.internal_marks ?? mark.total_marks ?? 0),
+      }))
+  ), [marks]);
+
+  const recommendedActions = useMemo(() => {
+    const backendActions = commandCenter?.recommended_actions || [];
+    if (backendActions.length) return backendActions;
+
+    const generated = [];
+    if ((intelligence?.reasons || []).length) {
+      generated.push(...intelligence.reasons.slice(0, 2).map((reason, index) => ({
+        title: index === 0 ? 'Review priority academic signal' : 'Plan the next support step',
+        detail: reason,
+        tone: intelligence.riskLevel === 'Low' ? 'positive' : 'warning',
+      })));
+    }
+
+    const weakMark = [...marks]
+      .filter((mark) => Number.isFinite(Number(mark.internal_marks)))
+      .sort((a, b) => Number(a.internal_marks) - Number(b.internal_marks))[0];
+
+    if (weakMark) {
+      generated.push({
+        title: `Focus ${weakMark.subject?.course_code || 'lowest internal'}`,
+        detail: `${weakMark.subject?.name || 'Lowest internal subject'} currently has ${weakMark.internal_marks} internal marks.`,
+        tone: Number(weakMark.internal_marks) < 40 ? 'warning' : 'neutral',
+      });
+    }
+
+    return generated.slice(0, 3);
+  }, [commandCenter?.recommended_actions, intelligence, marks]);
+
+  const recentResults = useMemo(() => {
+    const backendResults = commandCenter?.recent_results || [];
+    if (backendResults.length) return backendResults.slice(0, 6);
+
+    return [...marks]
+      .filter((mark) => mark.grade || Number.isFinite(Number(mark.internal_marks ?? mark.total_marks)))
+      .sort((a, b) => Number(b.semester || 0) - Number(a.semester || 0))
+      .slice(0, 6)
+      .map((mark) => ({
+        subject_title: mark.subject?.name,
+        subject_code: mark.subject?.course_code,
+        semester: mark.semester,
+        attempt: mark.attempt || 1,
+        grade: mark.grade,
+        internal_marks: mark.internal_marks,
+        marks: mark.total_marks,
+      }));
+  }, [commandCenter?.recent_results, marks]);
+
+  const semesterFocus = useMemo(() => {
+    const backendFocus = commandCenter?.semester_focus || [];
+    if (backendFocus.length) return backendFocus;
+
+    const grouped = marks.reduce((acc, mark) => {
+      const semester = Number(mark.semester || 0);
+      if (!semester) return acc;
+      if (!acc[semester]) {
+        acc[semester] = { semester, subject_count: 0, backlog_count: 0, gradePoints: [], internals: [] };
+      }
+
+      acc[semester].subject_count += 1;
+      const gp = GRADE_POINTS[String(mark.grade || '').trim().toUpperCase()];
+      if (Number.isFinite(Number(gp)) && Number(gp) > 0) acc[semester].gradePoints.push(Number(gp));
+      if (Number.isFinite(Number(mark.internal_marks))) acc[semester].internals.push(Number(mark.internal_marks));
+      if (['U', 'FAIL', 'F', 'AB'].includes(String(mark.grade || '').trim().toUpperCase())) acc[semester].backlog_count += 1;
+      return acc;
+    }, {});
+
+    return Object.values(grouped)
+      .map((item) => ({
+        ...item,
+        average_grade_points: item.gradePoints.length ? item.gradePoints.reduce((sum, value) => sum + value, 0) / item.gradePoints.length : 0,
+        average_internal: item.internals.length ? item.internals.reduce((sum, value) => sum + value, 0) / item.internals.length : 0,
+      }))
+      .sort((a, b) => b.semester - a.semester)
+      .slice(0, 3);
+  }, [commandCenter?.semester_focus, marks]);
+
   if (loadingPerf || loadingCommandCenter) {
     return (
       <div className="min-h-screen flex items-center justify-center">
@@ -263,13 +359,13 @@ const Dashboard = () => {
   return (
     <div className="w-full">
       {/* Header Section */}
-      <header className="flex flex-col md:flex-row md:items-end justify-between gap-6 mb-10 p-8 rounded-[2.5rem] glass-dark relative overflow-hidden">
+      <header className="relative mb-6 flex flex-col justify-between gap-5 overflow-hidden rounded-[2rem] p-5 glass-dark sm:mb-8 sm:p-7 md:flex-row md:items-end lg:mb-10 lg:rounded-[2.5rem] lg:p-8">
         <div className="absolute top-0 right-0 w-64 h-64 bg-primary/10 rounded-full blur-3xl -mr-32 -mt-32" />
         <div className="relative z-10">
           <div className="flex items-center gap-3 mb-4">
             <span className="px-3 py-1 rounded-full bg-primary/20 text-primary text-[10px] font-black uppercase tracking-widest border border-primary/20">Academic Pulse v2</span>
           </div>
-          <h1 className="text-3xl md:text-5xl font-black tracking-tighter mb-2 leading-tight">
+          <h1 className="mb-2 text-3xl font-black tracking-tight leading-tight md:text-5xl">
             Welcome, <span className="text-gradient animate-pulse">{user?.name || 'Academic'}</span>
           </h1>
           <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-sm text-muted-foreground/80">
@@ -289,9 +385,9 @@ const Dashboard = () => {
         <div className="bento-grid">
           {/* Onboarding Connect Banner */}
           {(!profProfile || !profProfile.github_username || !profProfile.linkedin_url) && (
-            <div className="col-span-12 glass rounded-[2rem] p-6 mb-2 border border-primary/20 relative overflow-hidden flex flex-col md:flex-row items-center justify-between gap-6 card-premium bg-gradient-to-r from-primary/10 via-background to-accent/5">
+            <div className="relative col-span-12 mb-2 flex flex-col items-stretch justify-between gap-5 overflow-hidden rounded-[2rem] border border-primary/20 bg-gradient-to-r from-primary/10 via-background to-accent/5 p-5 glass card-premium sm:p-6 md:flex-row md:items-center">
               <div className="absolute top-0 right-0 w-48 h-48 bg-primary/10 rounded-full blur-2xl -mr-24 -mt-24 pointer-events-none" />
-              <div className="flex items-start gap-4">
+              <div className="flex min-w-0 items-start gap-4">
                 <div className="p-3.5 rounded-2xl bg-primary/10 text-primary shrink-0 animate-pulse">
                   <Sparkles size={24} />
                 </div>
@@ -300,7 +396,7 @@ const Dashboard = () => {
                   <p className="text-sm text-muted-foreground/80 mt-1 max-w-2xl">
                     Connect your **GitHub** and **LinkedIn** accounts to auto-import your projects, view real-time coding analytics, and unlock AI-powered talent insights.
                   </p>
-                  <div className="flex items-center gap-4 mt-3 text-xs text-primary/80 font-bold uppercase tracking-wider">
+                  <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-2 text-xs font-bold uppercase tracking-wider text-primary/80">
                     {!profProfile?.github_username && <span className="flex items-center gap-1">❌ GitHub Pending</span>}
                     {profProfile?.github_username && <span className="flex items-center gap-1 text-emerald-500">✔ GitHub Connected</span>}
                     {!profProfile?.linkedin_url && <span className="flex items-center gap-1">❌ LinkedIn Pending</span>}
@@ -310,22 +406,22 @@ const Dashboard = () => {
               </div>
               <button 
                 onClick={() => handleTabChange('Professional')}
-                className="px-5 py-3 rounded-xl bg-primary text-primary-foreground font-black text-xs uppercase tracking-widest hover:scale-105 transition-all shrink-0 shadow-lg shadow-primary/25"
+                className="min-h-11 shrink-0 rounded-xl bg-primary px-5 py-3 text-xs font-black uppercase tracking-widest text-primary-foreground shadow-lg shadow-primary/25 transition-all hover:scale-[1.02] sm:w-fit"
               >
                 Connect Now
               </button>
             </div>
           )}
           {/* Intelligence Spotlight */}
-          <div className="col-span-12 lg:col-span-8 flex flex-col justify-between glass rounded-[2.5rem] p-8 card-premium">
+          <div className="col-span-12 flex flex-col justify-between rounded-[2rem] p-5 glass card-premium sm:p-7 lg:col-span-8 lg:rounded-[2.5rem] lg:p-8">
             <div>
               <SectionTitle
                 eyebrow="Intelligence Pulse"
                 title="Academic Insight"
                 copy="Automated observations across your semester trajectory."
               />
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-1 xl:grid-cols-2 gap-6 mt-8">
-                <div className="p-5 rounded-2xl bg-primary/5 border border-primary/10 flex gap-4">
+              <div className="mt-6 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-1 xl:grid-cols-2">
+                <div className="flex min-w-0 gap-4 rounded-2xl border border-primary/10 bg-primary/5 p-4 sm:p-5">
                   <div className="p-3 rounded-xl bg-primary/10 text-primary h-fit">
                     <TrendingUp size={24} />
                   </div>
@@ -335,7 +431,7 @@ const Dashboard = () => {
                     <span className="text-2xl font-black text-primary">{num(intelligence?.predictedGpa)}</span>
                   </div>
                 </div>
-                <div className={`p-5 rounded-2xl border flex gap-4 ${intelligence?.riskLevel === 'Low' ? 'bg-emerald-500/5 border-emerald-500/10' : 'bg-rose-500/5 border-rose-500/10'
+                <div className={`flex min-w-0 gap-4 rounded-2xl border p-4 sm:p-5 ${intelligence?.riskLevel === 'Low' ? 'bg-emerald-500/5 border-emerald-500/10' : 'bg-rose-500/5 border-rose-500/10'
                   }`}>
                   <div className={`p-3 rounded-xl h-fit ${intelligence?.riskLevel === 'Low' ? 'bg-emerald-500/10 text-emerald-500' : 'bg-rose-500/10 text-rose-500'
                     }`}>
@@ -366,7 +462,7 @@ const Dashboard = () => {
           </div>
 
           {/* Quick Metrics */}
-          <div className="col-span-12 lg:col-span-4 grid grid-cols-2 gap-4">
+          <div className="col-span-12 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:col-span-4">
             <StatCard icon={Award} label="Avg Grade Points" value={num(commandCenter?.analytics?.average_grade_points ?? intelligence?.averageGpa)} accent="#6366f1" subValue="Current CGPA" trend={commandCenter?.metrics?.[0]?.trend ?? 0} />
             <StatCard icon={Calendar} label="Attendance" value={`${fmt(commandCenter?.analytics?.attendance?.percentage ?? intelligence?.attendance)}%`} accent="#ec4899" />
             <StatCard icon={BadgeAlert} label="Active Backlogs" value={fmt(commandCenter?.analytics?.total_backlogs ?? intelligence?.failCount, '0')} accent="#f59e0b" />
@@ -374,54 +470,62 @@ const Dashboard = () => {
           </div>
 
           {/* Charts Row */}
-          <div className="col-span-12 lg:col-span-7 glass rounded-[2.5rem] p-8 card-premium min-w-0">
+          <div className="col-span-12 min-w-0 rounded-[2rem] p-5 glass card-premium sm:p-7 lg:col-span-7 lg:rounded-[2.5rem] lg:p-8">
             <SectionTitle title="Performance Timeline" copy="Semester-wise GPA trajectory and historical growth." />
             <div className="h-80 w-full mt-6">
-              <ResponsiveContainer width="100%" height="100%">
-                <AreaChart data={intelligence?.semesterTrend}>
-                  <defs>
-                    <linearGradient id="colorGpa" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%" stopColor="var(--primary)" stopOpacity={0.3} />
-                      <stop offset="95%" stopColor="var(--primary)" stopOpacity={0} />
-                    </linearGradient>
-                  </defs>
-                  <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="var(--border)" strokeOpacity={0.3} />
-                  <XAxis dataKey="label" axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: 'var(--muted-foreground)' }} />
-                  <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: 'var(--muted-foreground)' }} domain={[0, 10]} />
-                  <Tooltip
-                    contentStyle={{ border: '1px solid var(--border)', borderRadius: '12px', background: 'var(--card)', boxShadow: '0 8px 16px -4px rgba(0,0,0,0.1)' }}
-                    itemStyle={{ fontSize: '12px', fontWeight: '600' }}
-                  />
-                  <Area type="monotone" dataKey="averageGradePoints" name="GPA" stroke="var(--primary)" strokeWidth={4} fillOpacity={1} fill="url(#colorGpa)" />
-                </AreaChart>
-              </ResponsiveContainer>
+              {intelligence?.semesterTrend?.length ? (
+                <ResponsiveContainer width="100%" height={320}>
+                  <AreaChart data={intelligence.semesterTrend}>
+                    <defs>
+                      <linearGradient id="colorGpa" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="5%" stopColor="var(--primary)" stopOpacity={0.3} />
+                        <stop offset="95%" stopColor="var(--primary)" stopOpacity={0} />
+                      </linearGradient>
+                    </defs>
+                    <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="var(--border)" strokeOpacity={0.3} />
+                    <XAxis dataKey="label" axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: 'var(--muted-foreground)' }} />
+                    <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: 'var(--muted-foreground)' }} domain={[0, 10]} />
+                    <Tooltip
+                      contentStyle={{ border: '1px solid var(--border)', borderRadius: '12px', background: 'var(--card)', boxShadow: '0 8px 16px -4px rgba(0,0,0,0.1)' }}
+                      itemStyle={{ fontSize: '12px', fontWeight: '600' }}
+                    />
+                    <Area type="monotone" dataKey="averageGradePoints" name="GPA" stroke="var(--primary)" strokeWidth={4} fillOpacity={1} fill="url(#colorGpa)" />
+                  </AreaChart>
+                </ResponsiveContainer>
+              ) : (
+                <ChartEmptyState title="No GPA trend yet" copy="Semester GPA points need graded subject records before this chart can be drawn." />
+              )}
             </div>
           </div>
 
-          <div className="col-span-12 lg:col-span-5 glass rounded-[2.5rem] p-8 card-premium flex flex-col justify-between min-w-0">
+          <div className="col-span-12 flex min-w-0 flex-col justify-between rounded-[2rem] p-5 glass card-premium sm:p-7 lg:col-span-5 lg:rounded-[2.5rem] lg:p-8">
             <div>
               <SectionTitle title="Assessment Mastery" copy="Consistency across technical internal evaluations." />
               <div className="h-64 w-full mt-6">
-                <ResponsiveContainer width="100%" height="100%">
-                  <BarChart data={marks.slice(-6)}>
-                    <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="var(--border)" strokeOpacity={0.3} />
-                    <XAxis dataKey="subject.course_code" axisLine={false} tickLine={false} tick={{ fontSize: 10, fill: 'var(--muted-foreground)' }} />
-                    <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: 'var(--muted-foreground)' }} />
-                    <Tooltip
-                      contentStyle={{ border: '1px solid var(--border)', borderRadius: '12px', background: 'var(--card)' }}
-                    />
-                    <Bar dataKey="internal_marks" name="Internal Marks" radius={[6, 6, 0, 0]} fill="var(--primary)">
-                      {marks.slice(-6).map((entry, index) => (
-                        <Cell key={`cell-${index}`} fill={entry.internal_marks >= 40 ? 'var(--primary)' : 'var(--destructive)'} opacity={0.8} />
-                      ))}
-                    </Bar>
-                  </BarChart>
-                </ResponsiveContainer>
+                {assessmentChartData.length ? (
+                  <ResponsiveContainer width="100%" height={256}>
+                    <BarChart data={assessmentChartData}>
+                      <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="var(--border)" strokeOpacity={0.3} />
+                      <XAxis dataKey="chartLabel" axisLine={false} tickLine={false} tick={{ fontSize: 10, fill: 'var(--muted-foreground)' }} />
+                      <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: 'var(--muted-foreground)' }} />
+                      <Tooltip
+                        contentStyle={{ border: '1px solid var(--border)', borderRadius: '12px', background: 'var(--card)' }}
+                      />
+                      <Bar dataKey="chartMarks" name="Marks" radius={[6, 6, 0, 0]} fill="var(--primary)">
+                        {assessmentChartData.map((entry, index) => (
+                          <Cell key={`cell-${index}`} fill={entry.chartMarks >= 40 ? 'var(--primary)' : 'var(--destructive)'} opacity={0.8} />
+                        ))}
+                      </Bar>
+                    </BarChart>
+                  </ResponsiveContainer>
+                ) : (
+                  <ChartEmptyState title="No internal marks yet" copy="Assessment bars will appear once CIT/internal marks are available." />
+                )}
               </div>
             </div>
 
             <div className="mt-8 pt-6 border-t border-border/50 grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-3">
-              {marks.slice(-6).map((m, i) => (
+              {assessmentChartData.map((m, i) => (
                 <div key={i} className="flex items-start gap-2 group">
                   <span className="font-mono font-black text-[9px] text-primary bg-primary/5 px-2 py-0.5 rounded border border-primary/10 group-hover:bg-primary/10 transition-colors shrink-0">
                     {m.subject?.course_code}
@@ -437,7 +541,7 @@ const Dashboard = () => {
           <div className="glass rounded-[2.5rem] p-8 card-premium col-span-12 lg:col-span-6">
             <SectionTitle title="Recommended Actions" copy="Priority steps generated from your current academic signals." />
             <div className="space-y-3 mt-6">
-              {commandCenter?.recommended_actions?.map((action) => (
+              {recommendedActions.length ? recommendedActions.map((action) => (
                 <div key={action.title} className="flex items-start gap-4 rounded-2xl border border-border bg-card/60 p-4">
                   <div className={`mt-0.5 rounded-xl p-2 ${action.tone === 'critical'
                       ? 'bg-destructive/10 text-destructive'
@@ -454,14 +558,16 @@ const Dashboard = () => {
                     <p className="text-sm text-muted-foreground mt-1">{action.detail}</p>
                   </div>
                 </div>
-              ))}
+              )) : (
+                <ChartEmptyState title="No action needed yet" copy="No risk or recommendation signals are available for this student." />
+              )}
             </div>
           </div>
 
           <div className="glass rounded-[2.5rem] p-8 card-premium col-span-12 lg:col-span-6">
             <SectionTitle title="Recent Result Flow" copy="Latest result entries and attempt history." />
             <div className="space-y-3 mt-6">
-              {commandCenter?.recent_results?.slice(0, 6).map((item, index) => (
+              {recentResults.length ? recentResults.map((item, index) => (
                 <div key={`${item.subject_code || 'subject'}-${index}`} className="flex items-center justify-between gap-4 rounded-2xl border border-border bg-card/60 p-4">
                   <div>
                     <p className="text-sm font-bold">{item.subject_title || item.subject_code}</p>
@@ -482,14 +588,16 @@ const Dashboard = () => {
                     </div>
                   </div>
                 </div>
-              ))}
+              )) : (
+                <ChartEmptyState title="No results recorded" copy="Recent result entries will appear after marks or grades are available." />
+              )}
             </div>
           </div>
 
           <div className="glass rounded-[2.5rem] p-8 card-premium col-span-12 lg:col-span-6">
             <SectionTitle title="Semester Focus" copy="Your most recent semester snapshots." />
             <div className="space-y-3 mt-6">
-              {commandCenter?.semester_focus?.map((item) => (
+              {semesterFocus.length ? semesterFocus.map((item) => (
                 <div key={item.semester} className="flex items-center justify-between gap-4 rounded-2xl border border-border bg-card/60 p-4">
                   <div>
                     <p className="text-sm font-bold">Semester {item.semester}</p>
@@ -506,7 +614,9 @@ const Dashboard = () => {
                     </div>
                   </div>
                 </div>
-              ))}
+              )) : (
+                <ChartEmptyState title="No semester snapshot" copy="Semester focus needs at least one subject record with semester data." />
+              )}
             </div>
           </div>
 
@@ -582,7 +692,7 @@ const Dashboard = () => {
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
               <div className="rounded-2xl border border-border bg-card/60 p-4">
                 <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Sum of (CP × GP)</p>
-                <p className="mt-2 text-2xl font-black text-foreground">{num(semesterTotals.sumCpGp, 2)}</p>
+                <p className="mt-2 text-2xl font-black text-foreground">{num(semesterTotals.sumCpGp, 3)}</p>
                 <p className="mt-1 text-[10px] text-muted-foreground">Based on {semesterTotals.gradedCount} graded subjects</p>
               </div>
               <div className="rounded-2xl border border-border bg-card/60 p-4">
@@ -591,9 +701,9 @@ const Dashboard = () => {
                 <p className="mt-1 text-[10px] text-muted-foreground">Credit points counted (non-audit)</p>
               </div>
               <div className="rounded-2xl border border-border bg-card/60 p-4">
-                <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">CGPA</p>
-                <p className="mt-2 text-2xl font-black text-foreground">{num(semesterTotals.cgpa, 2)}</p>
-                <p className="mt-1 text-[10px] text-muted-foreground">CGPA = Σ(CP×GP) / Σ(CP)</p>
+                <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">{semFilter === 'ALL' ? 'CGPA' : 'SGPA'}</p>
+                <p className="mt-2 text-2xl font-black text-foreground">{num(semesterTotals.cgpa, 3)}</p>
+                <p className="mt-1 text-[10px] text-muted-foreground">{semFilter === 'ALL' ? 'CGPA = Σ(CP×GP) / Σ(CP)' : 'SGPA = Σ(CP×GP) / Σ(CP)'}</p>
               </div>
             </div>
 
@@ -765,7 +875,7 @@ const Dashboard = () => {
             <div className="glass rounded-[2.5rem] p-8 card-premium">
               <SectionTitle title="Subject Mastery Distribution" />
               <div className="h-64 mt-4 text-center">
-                <ResponsiveContainer width="100%" height="100%">
+                <ResponsiveContainer width="100%" height={256}>
                   <PieChart>
                     <Pie data={gradeDistribution} dataKey="value" nameKey="name" cx="50%" cy="50%" innerRadius={60} outerRadius={80} paddingAngle={8}>
                       {gradeDistribution.map((entry, index) => <Cell key={index} fill={CHART_COLORS[index % CHART_COLORS.length]} />)}
@@ -836,8 +946,8 @@ const Dashboard = () => {
 
       {activeTab === 'Attendance' && (
         <div className="space-y-6">
-          <div className="glass rounded-[2.5rem] p-8 card-premium">
-            <div className="flex flex-col md:flex-row md:items-end justify-between gap-6">
+          <div className="rounded-[2rem] p-5 glass card-premium sm:p-7 lg:rounded-[2.5rem] lg:p-8">
+            <div className="flex flex-col justify-between gap-5 md:flex-row md:items-end">
               <div className="flex flex-col">
                 <div className="flex items-center gap-2 mb-2">
                   <SectionTitle
@@ -866,7 +976,7 @@ const Dashboard = () => {
                   </div>
                 )}
               </div>
-              <div className="flex items-center gap-3">
+              <div className="flex flex-wrap items-center gap-3">
                 <div className="flex items-center gap-2 bg-muted/30 p-1.5 rounded-xl border border-border">
                   <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground ml-2">Semester</span>
                   <select
@@ -905,8 +1015,8 @@ const Dashboard = () => {
                       const matchPct = totalHours > 0 ? Math.round((totalPresent / totalHours) * 100) : 0;
 
                       return (
-                        <div key={idx} className="flex flex-col md:flex-row md:items-center justify-between gap-4 p-6 rounded-[2rem] border border-white/5 glass-dark hover:bg-white/10 transition-all duration-500 group card-premium">
-                          <div className="flex items-center gap-5">
+                        <div key={idx} className="group flex flex-col justify-between gap-4 rounded-[1.5rem] border border-white/5 p-4 glass-dark transition-all duration-500 hover:bg-white/10 sm:p-5 md:flex-row md:items-center lg:rounded-[2rem] lg:p-6 card-premium">
+                          <div className="flex min-w-0 items-center gap-4 sm:gap-5">
                             <div className={`p-4 rounded-2xl ${totalPresent === totalHours
                                 ? 'bg-emerald-500/10 text-emerald-500 shadow-[0_0_20px_rgba(16,185,129,0.1)]'
                                 : totalPresent === 0
@@ -917,7 +1027,7 @@ const Dashboard = () => {
                             </div>
                             <div>
                               <p className="text-lg font-black tracking-tight">{dateLabel}</p>
-                              <div className="flex items-center gap-3 mt-1.5">
+                              <div className="mt-1.5 flex flex-wrap items-center gap-2 sm:gap-3">
                                 <span className={`px-2 py-0.5 rounded-md text-[10px] font-black uppercase tracking-tighter ${totalPresent === totalHours ? 'bg-emerald-500 text-white' : 'bg-muted text-muted-foreground'
                                   }`}>
                                   {totalPresent === totalHours ? 'Full Presence' : `${totalPresent}h Tracked`}
@@ -930,7 +1040,7 @@ const Dashboard = () => {
                             </div>
                           </div>
 
-                          <div className="flex items-center gap-2 p-2.5 bg-black/20 rounded-2xl w-fit">
+                          <div className="flex w-full items-center gap-2 overflow-x-auto rounded-2xl bg-black/20 p-2.5 md:w-fit">
                             {statusArray.map((status, sIdx) => (
                               <div key={sIdx} className="group/hour relative">
                                 <div className={`h-6 w-3 rounded-full transition-all duration-500 ${status.toUpperCase() === 'P' || status.toUpperCase() === 'OD'
@@ -951,7 +1061,7 @@ const Dashboard = () => {
 
                   {/* Pagination Controls */}
                   {attendanceData.pages > 1 && (
-                    <div className="flex items-center justify-between pt-6 border-t border-border mt-8">
+                    <div className="mt-8 flex flex-col gap-4 border-t border-border pt-6 sm:flex-row sm:items-center sm:justify-between">
                       <p className="text-sm text-muted-foreground font-medium">
                         Showing page <span className="text-foreground font-bold">{attPage}</span> of <span className="text-foreground font-bold">{attendanceData.pages}</span>
                       </p>
@@ -986,15 +1096,15 @@ const Dashboard = () => {
       )}
 
       {activeTab === 'Profile' && (
-        <div className="grid lg:grid-cols-3 gap-8">
-          <div className="lg:col-span-2 glass rounded-[2.5rem] p-8 card-premium">
+        <div className="grid gap-6 lg:grid-cols-3 lg:gap-8">
+          <div className="rounded-[2rem] p-5 glass card-premium sm:p-7 lg:col-span-2 lg:rounded-[2.5rem] lg:p-8">
             <SectionTitle title="Profile Information" copy="Update your public profile and academic identifiers." />
             <form className="mt-8 space-y-6" onSubmit={(e) => {
               e.preventDefault();
               const formData = new FormData(e.target);
               updateProfileMutation.mutate(Object.fromEntries(formData));
             }}>
-              <div className="grid md:grid-cols-2 gap-6">
+              <div className="grid gap-5 md:grid-cols-2 lg:gap-6">
                 <div className="space-y-2">
                   <label className="text-sm font-bold text-muted-foreground">Full Name</label>
                   <input name="name" className="input-field w-full" defaultValue={user?.name} required />
@@ -1004,17 +1114,48 @@ const Dashboard = () => {
                   <input name="email" type="email" className="input-field w-full" defaultValue={user?.email} />
                 </div>
                 <div className="space-y-2">
+                  <label className="text-sm font-bold text-muted-foreground">Mobile Number</label>
+                  <input name="phone_primary" className="input-field w-full" defaultValue={user?.phone_primary} />
+                </div>
+                <div className="space-y-2">
                   <label className="text-sm font-bold text-muted-foreground">Batch</label>
                   <input name="batch" className="input-field w-full" defaultValue={user?.batch} />
                 </div>
+                <div className="space-y-2">
+                  <label className="text-sm font-bold text-muted-foreground">Parent / Guardian Name</label>
+                  <input name="parent_guardian_name" className="input-field w-full" defaultValue={user?.parent_guardian_name} />
+                </div>
+                <div className="space-y-2">
+                  <label className="text-sm font-bold text-muted-foreground">Parent Contact No</label>
+                  <input name="parent_phone" className="input-field w-full" defaultValue={user?.parent_phone} />
+                </div>
+                <div className="space-y-2">
+                  <label className="text-sm font-bold text-muted-foreground">Emergency Phone</label>
+                  <input name="emergency_contact_phone" className="input-field w-full" defaultValue={user?.emergency_contact_phone} />
+                </div>
+                <div className="space-y-2">
+                  <label className="text-sm font-bold text-muted-foreground">City</label>
+                  <input name="city" className="input-field w-full" defaultValue={user?.city} />
+                </div>
+                <div className="space-y-2 md:col-span-2">
+                  <label className="text-sm font-bold text-muted-foreground">Home Address</label>
+                  <textarea name="address" className="input-field w-full" defaultValue={user?.address} rows={2} />
+                </div>
               </div>
-              <button type="submit" disabled={updateProfileMutation.isPending} className="btn-primary w-fit">
-                {updateProfileMutation.isPending ? <Loader2 className="animate-spin" size={18} /> : <Save size={18} />}
-                <span>Save Profile Changes</span>
-              </button>
+              <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:gap-4">
+                <button type="submit" disabled={updateProfileMutation.isPending} className="btn-primary w-fit">
+                  {updateProfileMutation.isPending ? <Loader2 className="animate-spin" size={18} /> : <Save size={18} />}
+                  <span>Save Profile Changes</span>
+                </button>
+                {updateProfileMutation.isSuccess && (
+                  <span className="text-xs font-semibold text-emerald-500 flex items-center gap-1 animate-in fade-in duration-300">
+                    <CheckCircle2 size={14} /> Profile changes saved successfully!
+                  </span>
+                )}
+              </div>
             </form>
           </div>
-          <div className="glass rounded-[2.5rem] p-8 card-premium">
+          <div className="rounded-[2rem] p-5 glass card-premium sm:p-7 lg:rounded-[2.5rem] lg:p-8">
             <SectionTitle title="Account Status" />
             <div className="mt-8 space-y-4">
               <div className="flex justify-between p-3 rounded-xl bg-muted/50">
@@ -1043,7 +1184,7 @@ const Dashboard = () => {
       )}
 
       {activeTab === 'Security' && (
-        <div className="max-w-2xl mx-auto glass rounded-[2.5rem] p-8 card-premium">
+        <div className="mx-auto max-w-2xl rounded-[2rem] p-5 glass card-premium sm:p-7 lg:rounded-[2.5rem] lg:p-8">
           <SectionTitle title="Security Protocols" copy="Maintain the integrity of your academic command center." />
           <form className="mt-8 space-y-6" onSubmit={(e) => {
             e.preventDefault();

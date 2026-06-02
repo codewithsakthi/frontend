@@ -1,8 +1,9 @@
 import React from 'react';
 import { 
-  ResponsiveContainer, BarChart, Bar, XAxis, YAxis, 
+  BarChart, Bar, XAxis, YAxis, 
   CartesianGrid, Tooltip, Cell 
 } from 'recharts';
+import { RobustResponsiveContainer as ResponsiveContainer } from '../../../components/RobustResponsiveContainer';
 
 interface SkillMatrixChartProps {
   skills?: any[];

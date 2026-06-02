@@ -11,8 +11,8 @@ export const isGradedSubject = (record) => {
   if (!record) return false;
   
   // Get subject identifiers
-  const subjectCode = record.subject_code || '';
-  const subjectName = record.subject_name || record.subject_title || '';
+  const subjectCode = record.subject_code || record.course_code || record.subject?.course_code || record.subject?.code || '';
+  const subjectName = record.subject_name || record.subject_title || record.name || record.subject?.name || record.subject?.subject_name || '';
   
   // Filter out attendance-only subjects (GEN_ATT)
   return !subjectCode.toUpperCase().includes('GEN_ATT') && 

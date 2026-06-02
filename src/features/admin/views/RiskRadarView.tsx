@@ -62,7 +62,7 @@ export default function RiskRadarView({ onOpenStudentProfile }: { onOpenStudentP
     switch (activeTab) {
       case 'strategic': return data?.watchlist_students || [];
       case 'attendance': return data?.attendance_defaulters || [];
-      case 'academic': return data?.internal_defaulters || [];
+      case 'academic': return data?.backlog_clusters || [];
       default: return [];
     }
   }, [activeTab, data]);

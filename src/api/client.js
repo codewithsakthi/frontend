@@ -8,7 +8,7 @@ let API_BASE = VITE_API_URL || '';
 
 // In local development, if VITE_API_URL is missing, point directly to local backend on port 8001
 if (!API_BASE && typeof window !== 'undefined' && window.location.hostname === 'localhost') {
-  API_BASE = 'http://localhost:8001';
+  API_BASE = 'http://localhost:8000';
 } else if (!API_BASE) {
   API_BASE = FALLBACK_URL;
 }

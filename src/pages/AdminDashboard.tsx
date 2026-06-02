@@ -17,7 +17,6 @@ import {
   useReactTable,
 } from "@tanstack/react-table";
 import {
-  ResponsiveContainer,
   BarChart,
   Bar,
   CartesianGrid,
@@ -27,6 +26,7 @@ import {
   LineChart,
   Line,
 } from "recharts";
+import { RobustResponsiveContainer as ResponsiveContainer } from "../components/RobustResponsiveContainer";
 import {
   AlertTriangle,
   ArrowUp,
@@ -100,7 +100,7 @@ function getAvatarBgColor(rollNo: string): string {
 
 function StudentAvatar({ id, name, rollNo, size = 'h-8 w-8 text-xs font-bold' }: { id?: number; name: string; rollNo: string; size?: string }) {
   const [error, setError] = useState(false);
-  const baseUrl = (api as any).defaults.baseURL || 'http://localhost:8001/api/v1';
+  const baseUrl = (api as any).defaults.baseURL || 'http://localhost:8000/api/v1';
 
   useEffect(() => {
     setError(false);
@@ -156,48 +156,55 @@ function Metric({
     primary: "text-primary",
   };
   const valueColor = color ? colorMap[color] : "text-foreground";
+  const accentMap = {
+    emerald: "before:bg-emerald-500 bg-emerald-500/5 hover:border-emerald-500/35",
+    rose: "before:bg-rose-500 bg-rose-500/5 hover:border-rose-500/35",
+    amber: "before:bg-amber-500 bg-amber-500/5 hover:border-amber-500/35",
+    blue: "before:bg-blue-500 bg-blue-500/5 hover:border-blue-500/35",
+    primary: "before:bg-primary bg-primary/5 hover:border-primary/35",
+  };
   const TrendIcon = trend === "up" ? TrendingUp : trend === "down" ? TrendingDown : Minus;
   const trendColor = trend === "up" ? "text-emerald-500" : trend === "down" ? "text-rose-500" : "text-muted-foreground";
 
   return (
     <article
-      className={`metric-card relative group transition-all duration-200 ${
-        onClick ? "cursor-pointer hover:ring-2 hover:ring-primary/40 hover:shadow-lg hover:-translate-y-0.5" : ""
+      className={`group relative overflow-hidden rounded-2xl border border-border/60 bg-card/45 p-5 shadow-[0_8px_24px_rgba(2,6,23,0.08)] transition-all duration-200 before:absolute before:inset-y-4 before:left-0 before:w-1 ${
+        color ? accentMap[color] : "before:bg-border hover:border-primary/35"
+      } ${
+        onClick ? "cursor-pointer hover:bg-card/70 hover:shadow-[0_14px_34px_rgba(2,6,23,0.12)]" : ""
       }`}
       onClick={onClick}
       role={onClick ? "button" : undefined}
       tabIndex={onClick ? 0 : undefined}
       onKeyDown={onClick ? (e) => e.key === "Enter" && onClick() : undefined}
     >
-      {onClick && (
-        <span className="absolute top-3 right-3 opacity-0 group-hover:opacity-100 transition-opacity">
-          <Info size={14} className="text-primary" />
-        </span>
-      )}
-      <div className="flex items-center gap-2">
-        {Icon && <Icon size={14} className={`shrink-0 ${color ? colorMap[color] : "text-muted-foreground"}`} />}
-        <p className="text-[11px] font-black uppercase tracking-[0.18em] text-muted-foreground">
-          {label}
-        </p>
+      <div className="flex items-start justify-between gap-4">
+        <div className="min-w-0">
+          <p className="text-[11px] font-black uppercase tracking-[0.16em] text-muted-foreground">
+            {label}
+          </p>
+          <p className={`mt-3 text-4xl font-semibold tracking-tight ${valueColor}`}>
+            {value}
+          </p>
+        </div>
+        <div className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-border/50 bg-background/35 ${color ? colorMap[color] : "text-muted-foreground"}`}>
+          {Icon ? <Icon size={18} /> : null}
+        </div>
       </div>
 
-      <p className={`mt-4 text-4xl font-semibold tracking-tight ${valueColor}`}>
-        {value}
-      </p>
-
-      <div className="mt-2 flex items-center gap-1.5">
+      <div className="mt-4 flex min-w-0 items-start gap-2">
         {trend && trendLabel && (
-          <span className={`flex items-center gap-0.5 text-xs font-semibold ${trendColor}`}>
+          <span className={`inline-flex shrink-0 items-center gap-1 rounded-full bg-background/35 px-2 py-1 text-[11px] font-bold ${trendColor}`}>
             <TrendIcon size={12} />
             {trendLabel}
           </span>
         )}
-        <p className="text-sm text-muted-foreground">{hint}</p>
+        <p className="min-w-0 text-sm leading-5 text-muted-foreground">{hint}</p>
       </div>
       {onClick && (
-        <p className="mt-2 text-[10px] font-semibold uppercase tracking-widest text-primary/60 opacity-0 group-hover:opacity-100 transition-opacity">
-          Click to see reasoning →
-        </p>
+        <span className="absolute bottom-4 right-4 text-primary/60 opacity-0 transition-opacity group-hover:opacity-100">
+          <Info size={15} />
+        </span>
       )}
     </article>
   );
@@ -234,12 +241,12 @@ function MetricDrillDownModal({
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm"
+      className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 bg-black/60 backdrop-blur-sm"
       onClick={(e) => e.target === e.currentTarget && onClose()}
     >
-      <div className="relative w-full max-w-lg bg-background border border-border rounded-2xl shadow-2xl overflow-hidden">
+      <div className="relative w-full sm:max-w-lg bg-background border border-border rounded-t-2xl sm:rounded-2xl shadow-2xl overflow-hidden max-h-[90vh] flex flex-col">
         {/* Header */}
-        <div className={`px-6 py-5 ${detail.color} flex items-start justify-between gap-4`}>
+        <div className={`px-6 py-5 ${detail.color} flex items-start justify-between gap-4 shrink-0`}>
           <div className="flex items-center gap-3">
             <div className="rounded-xl bg-white/10 p-2.5">
               <Icon size={22} className="text-white" />
@@ -251,14 +258,14 @@ function MetricDrillDownModal({
           </div>
           <button
             onClick={onClose}
-            className="mt-0.5 rounded-lg p-1.5 text-white/70 hover:text-white hover:bg-white/10 transition-colors"
+            className="mt-0.5 rounded-lg p-1.5 text-white/70 hover:text-white hover:bg-white/10 transition-colors shrink-0"
           >
             <X size={18} />
           </button>
         </div>
 
         {/* Body */}
-        <div className="p-6 space-y-5 max-h-[70vh] overflow-y-auto">
+        <div className="p-6 space-y-5 overflow-y-auto flex-1 custom-scrollbar">
           {/* Current value hero */}
           <div className="flex items-center gap-4 p-4 rounded-xl bg-muted/20 border border-border/50">
             <p className="text-5xl font-bold text-foreground tracking-tight">{detail.value}</p>
@@ -309,7 +316,7 @@ function MetricDrillDownModal({
         </div>
 
         {/* Footer */}
-        <div className="px-6 py-4 border-t border-border/50 flex items-center justify-between">
+        <div className="px-6 py-4 border-t border-border/50 flex items-center justify-between shrink-0">
           <p className="text-xs text-muted-foreground">Data refreshed from live database</p>
           <button
             onClick={onClose}
@@ -1125,8 +1132,11 @@ function ThresholdConfigModal({
   if (!isOpen || !subject) return null;
 
   return (
-    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-      <div className="bg-background border border-border rounded-xl max-w-md w-full p-6 space-y-6">
+    <div
+      className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-end sm:items-center justify-center z-50 p-0 sm:p-4"
+      onClick={(e) => e.target === e.currentTarget && onClose()}
+    >
+      <div className="bg-background border border-border rounded-t-2xl sm:rounded-2xl max-w-md w-full p-6 space-y-6 shadow-2xl max-h-[90vh] overflow-y-auto custom-scrollbar">
         <div className="flex items-center justify-between">
           <h3 className="text-lg font-semibold text-foreground">
             Configure Threshold
@@ -2736,9 +2746,9 @@ export default function AdminDashboard() {
             )}
           </section>
 
-          <section className="grid gap-4 xl:grid-cols-2">
-            <article id="placement-pipeline" className="panel">
-              <div className="mb-4 flex items-center justify-between">
+          <section className="grid gap-4">
+            <article id="placement-pipeline" className="panel overflow-hidden">
+              <div className="mb-5 flex flex-col gap-3 border-b border-border/45 pb-4 sm:flex-row sm:items-center sm:justify-between">
                 <div>
                   <p className="text-lg font-semibold text-foreground">
                     Placement Pipeline
@@ -2749,10 +2759,12 @@ export default function AdminDashboard() {
                   </p>
                 </div>
 
-                <Target size={18} className="text-primary" />
+                <div className="flex h-10 w-10 items-center justify-center rounded-xl border border-primary/20 bg-primary/10 text-primary">
+                  <Target size={18} />
+                </div>
               </div>
 
-              <div className="grid grid-cols-2 gap-3 xl:grid-cols-4">
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
                 <Metric
                   label="Ready"
                   value={String(data?.placement_summary.ready_count ?? 0)}
@@ -2860,7 +2872,7 @@ export default function AdminDashboard() {
               </div>
 
               <div className="h-48">
-                <ResponsiveContainer width="100%" height="100%">
+                <ResponsiveContainer width="100%" height={192}>
                   <LineChart
                     data={
                       (data?.department_health?.semester_trends as any[]) || []
@@ -2872,7 +2884,7 @@ export default function AdminDashboard() {
                       vertical={false}
                     />
 
-                    <XAxis dataKey="date" hide />
+                    <XAxis dataKey="semester" hide />
 
                     <YAxis hide domain={["auto", "auto"]} />
 
@@ -2880,8 +2892,8 @@ export default function AdminDashboard() {
 
                     <Line
                       type="monotone"
-                      dataKey="score"
-                      stroke="var(--color-primary)"
+                      dataKey="average_gpa"
+                      stroke="var(--primary)"
                       strokeWidth={3}
                       dot={false}
                     />
@@ -2957,7 +2969,7 @@ export default function AdminDashboard() {
             </div>
 
             <div className="h-80">
-              <ResponsiveContainer width="100%" height="100%">
+              <ResponsiveContainer width="100%" height={320}>
                 <BarChart data={data?.bottlenecks || []}>
                   <CartesianGrid
                     strokeDasharray="3 3"
@@ -3063,7 +3075,7 @@ export default function AdminDashboard() {
                         </div>
 
                         <span className="text-xs font-bold text-primary">
-                          {value > 0 ? value : "ÃÂ¢Ã¢–Â¬Ã¢–¬Â"}{" "}
+                          {value > 0 ? value : "\u2014"}{" "}
                           {value > 0 && (
                             <span className="font-normal text-muted-foreground">
                               {label}
@@ -3082,8 +3094,12 @@ export default function AdminDashboard() {
                 </p>
 
                 <div className="h-40">
-                  <ResponsiveContainer width="100%" height="100%">
+                  <ResponsiveContainer width="100%" height={160}>
                     <BarChart data={leaderboardSpread}>
+                      <CartesianGrid strokeDasharray="3 3" stroke="rgba(148,163,184,0.1)" vertical={false} />
+                      <XAxis dataKey="student" tick={{ fontSize: 10 }} />
+                      <YAxis />
+                      <Tooltip />
                       <Bar
                         dataKey="marks"
                         fill="var(--chart-2)"
@@ -3768,8 +3784,11 @@ export default function AdminDashboard() {
 
           {/* Section Selection Modal */}
           {selectedCell && (
-            <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-              <div className="bg-background border border-border rounded-lg p-6 w-full max-w-md mx-4">
+            <div
+              className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-end sm:items-center justify-center z-50 p-0 sm:p-4"
+              onClick={(e) => e.target === e.currentTarget && (setSelectedCell(null), setEditingTimetable(null))}
+            >
+              <div className="bg-background border border-border rounded-t-2xl sm:rounded-2xl p-6 w-full max-w-md shadow-2xl max-h-[90vh] overflow-y-auto custom-scrollbar">
                 <h3 className="text-lg font-semibold mb-4">
                   {editingTimetable ? "Edit Slot" : "Assign Subject"} - {['', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'][selectedCell.day]} Period {selectedCell.period}
                 </h3>
@@ -4154,9 +4173,25 @@ export default function AdminDashboard() {
       )}
 
       {staffModalOpen && (
-        <div className="fixed inset-0 z-[9998] flex items-center justify-center bg-black/40 backdrop-blur-sm p-4">
-          <div className="w-[min(520px,90vw)] rounded-2xl bg-card p-6 shadow-xl ring-1 ring-border space-y-4">
-            <div className="flex items-start justify-between gap-3">
+        <div
+          className="fixed inset-0 z-[9998] flex items-end sm:items-center justify-center bg-black/60 backdrop-blur-sm p-0 sm:p-4"
+          onClick={(e) => {
+            if (e.target === e.currentTarget) {
+              setStaffModalOpen(false);
+              setEditingStaff(null);
+              setStaffForm({
+                username: "",
+                name: "",
+                email: "",
+                department: "",
+                password: "password123",
+              });
+            }
+          }}
+        >
+          <div className="w-full sm:max-w-lg rounded-t-2xl sm:rounded-2xl bg-card border border-border shadow-2xl max-h-[90vh] flex flex-col overflow-hidden">
+            {/* Header */}
+            <div className="px-6 py-5 border-b border-border/40 flex items-start justify-between gap-3 shrink-0">
               <div>
                 <p className="text-lg font-semibold text-foreground">
                   {editingStaff ? "Edit Staff" : "Add Staff"}
@@ -4183,6 +4218,9 @@ export default function AdminDashboard() {
                 Close
               </button>
             </div>
+
+            {/* Scrollable Body */}
+            <div className="p-6 space-y-4 overflow-y-auto flex-1 custom-scrollbar">
 
             <div className="grid gap-3">
               {!editingStaff && (
@@ -4442,7 +4480,10 @@ export default function AdminDashboard() {
               </div>
             </div>
 
-            <div className="flex justify-end gap-2">
+            </div>
+
+            {/* Footer */}
+            <div className="px-6 py-4 border-t border-border/40 flex justify-end gap-2 shrink-0 bg-muted/10">
               <button
                 className="tab-chip"
                 onClick={() => {
@@ -4480,23 +4521,26 @@ export default function AdminDashboard() {
       {/* Profile Modal */}
 
       {staffToDelete && (
-        <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/40 backdrop-blur-sm p-4">
-          <div className="w-[min(420px,90vw)] rounded-2xl bg-card p-6 shadow-xl ring-1 ring-border space-y-4">
+        <div
+          className="fixed inset-0 z-[9999] flex items-end sm:items-center justify-center bg-black/60 backdrop-blur-sm p-0 sm:p-4"
+          onClick={(e) => e.target === e.currentTarget && setStaffToDelete(null)}
+        >
+          <div className="w-full sm:max-w-md rounded-t-2xl sm:rounded-2xl bg-card border border-border p-6 shadow-2xl space-y-4 max-h-[90vh] overflow-y-auto custom-scrollbar">
             <div>
               <p className="text-lg font-semibold text-foreground">
                 Delete staff?
               </p>
 
-              <p className="text-sm text-muted-foreground">
+              <p className="text-sm text-muted-foreground mt-2">
                 This will remove{" "}
-                <span className="font-semibold">
+                <span className="font-semibold text-primary">
                   {staffToDelete.name || staffToDelete.username}
                 </span>{" "}
                 and revoke their access.
               </p>
             </div>
 
-            <div className="flex justify-end gap-2">
+            <div className="flex justify-end gap-2 pt-2">
               <button
                 className="tab-chip"
                 onClick={() => setStaffToDelete(null)}
