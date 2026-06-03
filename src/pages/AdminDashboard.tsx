@@ -1669,6 +1669,26 @@ export default function AdminDashboard() {
     },
   });
 
+  const createStudentMutation = useMutation({
+    mutationFn: async (payload: any) => api.post("admin/students", payload),
+    onSuccess: (response: any) => {
+      const data = response?.data ?? response;
+      setAddStudentResult(data);
+      setAddStudentError("");
+      queryClient.invalidateQueries({ queryKey: ["admin-students-paginated"] });
+      queryClient.invalidateQueries({ queryKey: ["admin-students"] });
+      queryClient.invalidateQueries({ queryKey: ["admin-batches"] });
+      queryClient.invalidateQueries({ queryKey: ["admin-command-center"] });
+    },
+    onError: (error: any) => {
+      const msg =
+        error?.response?.data?.detail ||
+        error?.message ||
+        "Failed to create student";
+      setAddStudentError(typeof msg === "string" ? msg : JSON.stringify(msg));
+    },
+  });
+
   const createStaffMutation = useMutation({
     mutationFn: async (payload: any) => api.post("admin/staff", payload),
     onSuccess: async (response: any) => {
@@ -1911,6 +1931,29 @@ export default function AdminDashboard() {
   });
   const [selectedBatch, setSelectedBatch] = useState("");
   const [selectedTimetableSemester, setSelectedTimetableSemester] = useState("");
+
+  // ── Add Student modal state ──────────────────────────────────────────────────
+  const [addStudentOpen, setAddStudentOpen] = useState(false);
+  const [addStudentForm, setAddStudentForm] = useState({
+    roll_no: "",
+    name: "",
+    dob: "",
+    email: "",
+    batch: "",
+    reg_no: "",
+    section: "",
+    current_semester: "",
+  });
+  const [addStudentResult, setAddStudentResult] = useState<{
+    roll_no: string; name: string; username: string; initial_password: string;
+    batch?: string; section?: string; current_semester?: number;
+  } | null>(null);
+  const [addStudentError, setAddStudentError] = useState("");
+
+  // ── Add Batch modal state ────────────────────────────────────────────────────
+  const [addBatchOpen, setAddBatchOpen] = useState(false);
+  const [newBatchName, setNewBatchName] = useState("");
+  const [addBatchError, setAddBatchError] = useState("");
 
   const makeSubjectKey = (s: any, idx: number) => {
     // Use ID as primary key for stability, fallback to course_code, then index only if absolutely necessary
@@ -2625,8 +2668,8 @@ export default function AdminDashboard() {
     <div className="w-full pb-24 lg:pb-10">
       <MetricDrillDownModal detail={drillDownMetric} onClose={() => setDrillDownMetric(null)} />
       {activeTab !== "AI" && (
-        <div className="-mx-1 mb-6 overflow-x-auto pb-1" style={{ WebkitOverflowScrolling: "touch" }}>
-          <div className="flex gap-2 min-w-max px-1">
+        <div className="-mx-1 mb-7 overflow-x-auto" style={{ WebkitOverflowScrolling: "touch" }}>
+          <div className="flex min-w-max px-1 border-b border-border/50">
             {[
               "Overview",
               "Performance",
@@ -2643,7 +2686,11 @@ export default function AdminDashboard() {
               <button
                 key={tab}
                 onClick={() => setActiveTab(tab)}
-                className={`tab-chip whitespace-nowrap ${activeTab === tab ? "!bg-primary !text-white shadow" : ""}`}
+                className={`relative whitespace-nowrap px-4 py-2.5 text-sm font-semibold transition-all duration-200 ${
+                  activeTab === tab
+                    ? "text-primary after:absolute after:bottom-0 after:left-0 after:right-0 after:h-0.5 after:rounded-full after:bg-primary after:content-[''] after:block"
+                    : "text-muted-foreground hover:text-foreground"
+                }`}
               >
                 {tab}
               </button>
@@ -3126,143 +3173,512 @@ export default function AdminDashboard() {
         </div>
       )}
 
-      {activeTab === "Students" && (
-        <div className="space-y-6">
-          <article className="panel">
-            <div className="mb-6 flex flex-wrap items-center justify-between gap-4">
-              <div>
-                <p className="text-lg font-semibold text-foreground">
-                  Student Management
-                </p>
 
-                <p className="text-sm text-muted-foreground">
-                  Full cohort directory with advanced sorting and batch filters.
+      {/* ─── Add Student Modal ─────────────────────────────────────────────────── */}
+      {addStudentOpen && (
+        <div
+          className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 bg-black/60 backdrop-blur-sm"
+          onClick={(e) => e.target === e.currentTarget && !createStudentMutation.isPending && setAddStudentOpen(false)}
+        >
+          <div className="relative w-full sm:max-w-lg bg-background border border-border rounded-t-2xl sm:rounded-2xl shadow-2xl overflow-hidden max-h-[92vh] flex flex-col">
+            {/* Header */}
+            <div className="px-6 py-5 bg-gradient-to-r from-indigo-600 to-violet-600 flex items-start justify-between gap-4 shrink-0">
+              <div className="flex items-center gap-3">
+                <div className="rounded-xl bg-white/15 p-2.5">
+                  <Users size={22} className="text-white" />
+                </div>
+                <div>
+                  <p className="text-[10px] font-black uppercase tracking-[0.22em] text-white/70">Student Management</p>
+                  <h2 className="text-xl font-bold text-white leading-tight">
+                    {addStudentResult ? "Student Created!" : "Add New Student"}
+                  </h2>
+                </div>
+              </div>
+              <button
+                onClick={() => !createStudentMutation.isPending && setAddStudentOpen(false)}
+                className="mt-0.5 rounded-lg p-1.5 text-white/70 hover:text-white hover:bg-white/10 transition-colors shrink-0"
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            {/* Body */}
+            <div className="p-6 overflow-y-auto flex-1 custom-scrollbar">
+              {addStudentResult ? (
+                /* Success state */
+                <div className="space-y-4">
+                  <div className="flex items-center gap-3 p-4 rounded-xl bg-emerald-500/10 border border-emerald-500/20">
+                    <CheckCircle2 size={28} className="text-emerald-500 shrink-0" />
+                    <div>
+                      <p className="font-bold text-foreground">{addStudentResult.name}</p>
+                      <p className="text-sm text-muted-foreground">Student account created successfully</p>
+                    </div>
+                  </div>
+                  <div className="space-y-2">
+                    {[
+                      { label: "Roll No", value: addStudentResult.roll_no },
+                      { label: "Username", value: addStudentResult.username },
+                      { label: "Initial Password", value: addStudentResult.initial_password },
+                      { label: "Batch", value: addStudentResult.batch || "—" },
+                      { label: "Section", value: addStudentResult.section || "—" },
+                      { label: "Semester", value: addStudentResult.current_semester ? String(addStudentResult.current_semester) : "—" },
+                    ].map(({ label, value }) => (
+                      <div key={label} className="flex items-center justify-between p-3 rounded-lg bg-muted/10 border border-border/40">
+                        <span className="text-sm text-muted-foreground">{label}</span>
+                        <span className={`text-sm font-bold font-mono ${label === "Initial Password" ? "text-amber-500" : "text-foreground"}`}>{value}</span>
+                      </div>
+                    ))}
+                  </div>
+                  <div className="flex items-start gap-2 p-3 rounded-lg bg-amber-500/5 border border-amber-500/20">
+                    <Zap size={13} className="text-amber-500 mt-0.5 shrink-0" />
+                    <p className="text-xs text-muted-foreground">
+                      Share the initial password with the student. They will be prompted to change it on first login.
+                    </p>
+                  </div>
+                  <button
+                    onClick={() => {
+                      setAddStudentResult(null);
+                      setAddStudentForm({ roll_no: "", name: "", dob: "", email: "", batch: "", reg_no: "", section: "", current_semester: "" });
+                    }}
+                    className="w-full py-2.5 rounded-xl bg-indigo-600 text-white text-sm font-semibold hover:bg-indigo-700 transition-colors"
+                  >
+                    Add Another Student
+                  </button>
+                </div>
+              ) : (
+                /* Form state */
+                <div className="space-y-4">
+                  {addStudentError && (
+                    <div className="flex items-center gap-2 p-3 rounded-lg bg-rose-500/10 border border-rose-500/20 text-rose-500 text-sm">
+                      <XCircle size={15} className="shrink-0" />
+                      {addStudentError}
+                    </div>
+                  )}
+
+                  <div className="grid grid-cols-2 gap-3">
+                    <div className="col-span-2">
+                      <label className="block text-xs font-semibold text-muted-foreground mb-1.5 uppercase tracking-wider">Full Name *</label>
+                      <input
+                        value={addStudentForm.name}
+                        onChange={(e) => setAddStudentForm((f) => ({ ...f, name: e.target.value }))}
+                        placeholder="e.g. Priya Sharma"
+                        className="input-field w-full"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-xs font-semibold text-muted-foreground mb-1.5 uppercase tracking-wider">Roll No *</label>
+                      <input
+                        value={addStudentForm.roll_no}
+                        onChange={(e) => setAddStudentForm((f) => ({ ...f, roll_no: e.target.value }))}
+                        placeholder="e.g. 23MCA001"
+                        className="input-field w-full font-mono"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-xs font-semibold text-muted-foreground mb-1.5 uppercase tracking-wider">Reg No</label>
+                      <input
+                        value={addStudentForm.reg_no}
+                        onChange={(e) => setAddStudentForm((f) => ({ ...f, reg_no: e.target.value }))}
+                        placeholder="e.g. REG20230001"
+                        className="input-field w-full font-mono"
+                      />
+                    </div>
+
+                    <div className="col-span-2">
+                      <label className="block text-xs font-semibold text-muted-foreground mb-1.5 uppercase tracking-wider">
+                        Date of Birth * <span className="text-amber-500 normal-case font-normal">(used as initial password DDMMYYYY)</span>
+                      </label>
+                      <input
+                        type="date"
+                        value={addStudentForm.dob}
+                        onChange={(e) => setAddStudentForm((f) => ({ ...f, dob: e.target.value }))}
+                        className="input-field w-full"
+                      />
+                    </div>
+
+                    <div className="col-span-2">
+                      <label className="block text-xs font-semibold text-muted-foreground mb-1.5 uppercase tracking-wider">Email</label>
+                      <input
+                        type="email"
+                        value={addStudentForm.email}
+                        onChange={(e) => setAddStudentForm((f) => ({ ...f, email: e.target.value }))}
+                        placeholder="e.g. priya@college.edu"
+                        className="input-field w-full"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-xs font-semibold text-muted-foreground mb-1.5 uppercase tracking-wider">Batch</label>
+                      <input
+                        value={addStudentForm.batch}
+                        onChange={(e) => setAddStudentForm((f) => ({ ...f, batch: e.target.value }))}
+                        placeholder="e.g. 2023-2025"
+                        className="input-field w-full"
+                        list="batch-suggestions"
+                      />
+                      <datalist id="batch-suggestions">
+                        {batchOptions.map((b) => (
+                          <option key={b} value={b} />
+                        ))}
+                      </datalist>
+                    </div>
+
+                    <div>
+                      <label className="block text-xs font-semibold text-muted-foreground mb-1.5 uppercase tracking-wider">Section</label>
+                      <select
+                        value={addStudentForm.section}
+                        onChange={(e) => setAddStudentForm((f) => ({ ...f, section: e.target.value }))}
+                        className="input-field w-full"
+                      >
+                        <option value="">Select Section</option>
+                        <option value="A">Section A</option>
+                        <option value="B">Section B</option>
+                        <option value="C">Section C</option>
+                        <option value="D">Section D</option>
+                      </select>
+                    </div>
+
+                    <div>
+                      <label className="block text-xs font-semibold text-muted-foreground mb-1.5 uppercase tracking-wider">Current Semester</label>
+                      <select
+                        value={addStudentForm.current_semester}
+                        onChange={(e) => setAddStudentForm((f) => ({ ...f, current_semester: e.target.value }))}
+                        className="input-field w-full"
+                      >
+                        <option value="">Select Semester</option>
+                        {[1,2,3,4,5,6,7,8].map((s) => (
+                          <option key={s} value={s}>Semester {s}</option>
+                        ))}
+                      </select>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Footer */}
+            {!addStudentResult && (
+              <div className="px-6 py-4 border-t border-border/50 flex items-center justify-between shrink-0">
+                <p className="text-xs text-muted-foreground">* Required fields</p>
+                <div className="flex gap-2">
+                  <button
+                    onClick={() => setAddStudentOpen(false)}
+                    disabled={createStudentMutation.isPending}
+                    className="px-4 py-2 text-sm font-semibold border border-border/60 rounded-lg hover:bg-muted/30 transition-colors disabled:opacity-50"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    disabled={createStudentMutation.isPending || !addStudentForm.roll_no.trim() || !addStudentForm.name.trim() || !addStudentForm.dob}
+                    onClick={() => {
+                      setAddStudentError("");
+                      const payload: any = {
+                        roll_no: addStudentForm.roll_no.trim(),
+                        name: addStudentForm.name.trim(),
+                        dob: addStudentForm.dob,
+                      };
+                      if (addStudentForm.email.trim()) payload.email = addStudentForm.email.trim();
+                      if (addStudentForm.batch.trim()) payload.batch = addStudentForm.batch.trim();
+                      if (addStudentForm.reg_no.trim()) payload.reg_no = addStudentForm.reg_no.trim();
+                      if (addStudentForm.section) payload.section = addStudentForm.section;
+                      if (addStudentForm.current_semester) payload.current_semester = parseInt(addStudentForm.current_semester);
+                      createStudentMutation.mutate(payload);
+                    }}
+                    className="px-5 py-2 text-sm font-semibold bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors disabled:opacity-40 flex items-center gap-2"
+                  >
+                    {createStudentMutation.isPending ? (
+                      <><RefreshCw size={14} className="animate-spin" /> Creating...</>
+                    ) : (
+                      <><Plus size={14} /> Create Student</>
+                    )}
+                  </button>
+                </div>
+              </div>
+            )}
+            {addStudentResult && (
+              <div className="px-6 py-4 border-t border-border/50 flex justify-end shrink-0">
+                <button
+                  onClick={() => setAddStudentOpen(false)}
+                  className="px-5 py-2 text-sm font-semibold bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-colors"
+                >
+                  Done
+                </button>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* ─── Add Batch Modal ──────────────────────────────────────────────────── */}
+      {addBatchOpen && (
+        <div
+          className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 bg-black/60 backdrop-blur-sm"
+          onClick={(e) => e.target === e.currentTarget && setAddBatchOpen(false)}
+        >
+          <div className="relative w-full sm:max-w-md bg-background border border-border rounded-t-2xl sm:rounded-2xl shadow-2xl overflow-hidden flex flex-col">
+            {/* Header */}
+            <div className="px-6 py-5 bg-gradient-to-r from-emerald-600 to-teal-600 flex items-start justify-between gap-4 shrink-0">
+              <div className="flex items-center gap-3">
+                <div className="rounded-xl bg-white/15 p-2.5">
+                  <ArrowUp size={22} className="text-white" />
+                </div>
+                <div>
+                  <p className="text-[10px] font-black uppercase tracking-[0.22em] text-white/70">Batch Management</p>
+                  <h2 className="text-xl font-bold text-white leading-tight">Add New Batch</h2>
+                </div>
+              </div>
+              <button onClick={() => setAddBatchOpen(false)} className="mt-0.5 rounded-lg p-1.5 text-white/70 hover:text-white hover:bg-white/10 transition-colors shrink-0">
+                <X size={18} />
+              </button>
+            </div>
+
+            {/* Body */}
+            <div className="p-6 space-y-4">
+              {addBatchError && (
+                <div className="flex items-center gap-2 p-3 rounded-lg bg-rose-500/10 border border-rose-500/20 text-rose-500 text-sm">
+                  <XCircle size={15} className="shrink-0" />
+                  {addBatchError}
+                </div>
+              )}
+
+              <div>
+                <label className="block text-xs font-semibold text-muted-foreground mb-1.5 uppercase tracking-wider">Batch Identifier *</label>
+                <input
+                  value={newBatchName}
+                  onChange={(e) => setNewBatchName(e.target.value)}
+                  placeholder="e.g. 2024-2026 or 2023-25"
+                  className="input-field w-full text-lg font-mono"
+                  autoFocus
+                />
+                <p className="text-xs text-muted-foreground mt-1.5">
+                  Use a year-range format like <code className="font-mono bg-muted/40 px-1 rounded">2023-2025</code>. This becomes the batch label for students.
                 </p>
               </div>
 
-              <div className="flex flex-wrap items-center gap-2">
-                <div className="relative">
-                  <Search
-                    size={14}
-                    className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground"
-                  />
+              <div className="p-4 rounded-xl bg-primary/5 border border-primary/20">
+                <p className="text-[10px] font-black uppercase tracking-[0.18em] text-primary mb-2">What happens next?</p>
+                <p className="text-sm text-muted-foreground">
+                  The batch label will be available when adding students. You can then filter and manage students by this batch in the directory.
+                </p>
+              </div>
 
-                  <input
-                    value={studentSearch}
-                    onChange={(e) => setStudentSearch(e.target.value)}
-                    className="input-field !py-2 pl-9 !w-64"
-                    placeholder="Search name, roll, email..."
-                  />
+              {batchOptions.length > 0 && (
+                <div>
+                  <p className="text-[10px] font-black uppercase tracking-[0.18em] text-muted-foreground mb-2">Existing Batches</p>
+                  <div className="flex flex-wrap gap-2">
+                    {batchOptions.map((b) => (
+                      <span key={b} className="px-2.5 py-1 rounded-full bg-muted/30 border border-border/40 text-xs font-mono text-muted-foreground">{b}</span>
+                    ))}
+                  </div>
                 </div>
+              )}
+            </div>
 
-                <select
-                  className="input-field !py-2"
-                  value={studentBatchFilter}
-                  onChange={(e) => setStudentBatchFilter(e.target.value)}
-                >
-                  <option value="ALL">All Batches</option>
-
-                  {batchOptions.map((b) => (
-                    <option key={b} value={b}>
-                      {b}
-                    </option>
-                  ))}
-                </select>
-
-                <select
-                  className="input-field !py-2"
-                  value={studentSemesterFilter}
-                  onChange={(e) => setStudentSemesterFilter(e.target.value)}
-                >
-                  <option value="ALL">All Semesters</option>
-
-                  {semesterOptions.map((s) => (
-                    <option key={s} value={String(s)}>
-                      Sem {s}
-                    </option>
-                  ))}
-                </select>
-
-                <select
-                  className="input-field !py-2"
-                  value={studentSectionFilter}
-                  onChange={(e) => setStudentSectionFilter(e.target.value)}
-                >
-                  <option value="ALL">All Secs</option>
-
-                  <option value="A">Sec A</option>
-
-                  <option value="B">Sec B</option>
-                </select>
-
+            {/* Footer */}
+            <div className="px-6 py-4 border-t border-border/50 flex items-center justify-between shrink-0">
+              <p className="text-xs text-muted-foreground">The batch is stored with student records</p>
+              <div className="flex gap-2">
                 <button
-                  onClick={() => setStudentRiskOnly(!studentRiskOnly)}
-                  className={`tab-chip ${studentRiskOnly ? "!bg-rose-500 !text-white" : ""}`}
+                  onClick={() => setAddBatchOpen(false)}
+                  className="px-4 py-2 text-sm font-semibold border border-border/60 rounded-lg hover:bg-muted/30 transition-colors"
                 >
-                  Risk Only
+                  Cancel
                 </button>
+                <button
+                  disabled={!newBatchName.trim()}
+                  onClick={() => {
+                    const trimmed = newBatchName.trim();
+                    if (!trimmed) {
+                      setAddBatchError("Batch name cannot be empty");
+                      return;
+                    }
+                    if (batchOptions.includes(trimmed)) {
+                      setAddBatchError(`Batch "${trimmed}" already exists`);
+                      return;
+                    }
+                    // Batch is a label—open Add Student modal pre-filled with this batch
+                    setAddBatchOpen(false);
+                    setAddStudentOpen(true);
+                    setAddStudentForm({
+                      roll_no: "",
+                      name: "",
+                      dob: "",
+                      email: "",
+                      batch: trimmed,
+                      reg_no: "",
+                      section: "",
+                      current_semester: "",
+                    });
+                    setAddStudentResult(null);
+                    setAddStudentError("");
+                  }}
+                  className="px-5 py-2 text-sm font-semibold bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 transition-colors disabled:opacity-40 flex items-center gap-2"
+                >
+                  <Plus size={14} />
+                  Create & Add Students
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
+      {activeTab === "Students" && (
+        <div className="space-y-5">
+          {/* Page header */}
+          <div className="flex flex-wrap items-start justify-between gap-4">
+            <div>
+              <p className="text-[11px] font-black uppercase tracking-[0.2em] text-primary mb-1">Management</p>
+              <h2 className="text-2xl font-bold tracking-tight text-foreground">Student Directory</h2>
+              <p className="mt-1 text-sm text-muted-foreground">Full cohort directory with advanced sorting and batch filters.</p>
+            </div>
+            <div className="flex items-center gap-2 flex-wrap">
+              <button
+                onClick={() => {
+                  setAddBatchOpen(true);
+                  setNewBatchName("");
+                  setAddBatchError("");
+                }}
+                className="inline-flex items-center gap-1.5 rounded-xl border border-border/60 bg-card/80 px-4 py-2 text-sm font-semibold text-foreground shadow-sm hover:bg-muted/50 hover:border-primary/30 transition-all"
+                title="Add a new batch"
+              >
+                <Plus size={14} />
+                Add Batch
+              </button>
+              <button
+                onClick={() => {
+                  setAddStudentOpen(true);
+                  setAddStudentForm({
+                    roll_no: "",
+                    name: "",
+                    dob: "",
+                    email: "",
+                    batch: studentBatchFilter !== "ALL" ? studentBatchFilter : "",
+                    reg_no: "",
+                    section: studentSectionFilter !== "ALL" ? studentSectionFilter : "",
+                    current_semester: "",
+                  });
+                  setAddStudentResult(null);
+                  setAddStudentError("");
+                }}
+                className="btn-primary"
+                title="Add a new student"
+              >
+                <Plus size={14} />
+                Add Student
+              </button>
+            </div>
+          </div>
+
+          <article className="panel !p-0 overflow-hidden">
+            {/* Filter toolbar */}
+            <div className="flex flex-wrap items-center gap-2.5 px-5 py-4 border-b border-border/50 bg-muted/20">
+              <div className="relative flex-1 min-w-[200px] max-w-xs">
+                <Search
+                  size={14}
+                  className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground pointer-events-none"
+                />
+                <input
+                  value={studentSearch}
+                  onChange={(e) => setStudentSearch(e.target.value)}
+                  className="w-full rounded-xl border border-border/60 bg-card/80 py-2 pl-9 pr-4 text-sm outline-none transition-all focus:border-primary/50 focus:ring-2 focus:ring-primary/10 placeholder:text-muted-foreground"
+                  placeholder="Search name, roll, email…"
+                />
+              </div>
+
+              <select
+                className="rounded-xl border border-border/60 bg-card/80 px-3 py-2 text-sm font-medium text-foreground outline-none transition-all hover:border-primary/30 focus:border-primary/50 focus:ring-2 focus:ring-primary/10"
+                value={studentBatchFilter}
+                onChange={(e) => setStudentBatchFilter(e.target.value)}
+              >
+                <option value="ALL">All Batches</option>
+                {batchOptions.map((b) => (
+                  <option key={b} value={b}>{b}</option>
+                ))}
+              </select>
+
+              <select
+                className="rounded-xl border border-border/60 bg-card/80 px-3 py-2 text-sm font-medium text-foreground outline-none transition-all hover:border-primary/30 focus:border-primary/50 focus:ring-2 focus:ring-primary/10"
+                value={studentSemesterFilter}
+                onChange={(e) => setStudentSemesterFilter(e.target.value)}
+              >
+                <option value="ALL">All Semesters</option>
+                {semesterOptions.map((s) => (
+                  <option key={s} value={String(s)}>Sem {s}</option>
+                ))}
+              </select>
+
+              <select
+                className="rounded-xl border border-border/60 bg-card/80 px-3 py-2 text-sm font-medium text-foreground outline-none transition-all hover:border-primary/30 focus:border-primary/50 focus:ring-2 focus:ring-primary/10"
+                value={studentSectionFilter}
+                onChange={(e) => setStudentSectionFilter(e.target.value)}
+              >
+                <option value="ALL">All Sections</option>
+                <option value="A">Section A</option>
+                <option value="B">Section B</option>
+              </select>
+
+              <button
+                onClick={() => setStudentRiskOnly(!studentRiskOnly)}
+                className={`inline-flex items-center gap-1.5 rounded-xl px-3 py-2 text-sm font-semibold border transition-all ${
+                  studentRiskOnly
+                    ? "bg-rose-500 text-white border-rose-500 shadow-sm"
+                    : "border-border/60 bg-card/80 text-muted-foreground hover:border-rose-300 hover:text-rose-600"
+                }`}
+              >
+                <ShieldAlert size={13} />
+                At Risk
+              </button>
+
+              <div className="ml-auto">
                 <button
                   onClick={() => {
-                    const batch =
-                      studentBatchFilter !== "ALL"
-                        ? studentBatchFilter
-                        : "2025-2027";
-
+                    const batch = studentBatchFilter !== "ALL" ? studentBatchFilter : "2025-2027";
                     assignSectionsMutation.mutate(batch);
                   }}
                   disabled={assignSectionsMutation.isPending}
-                  className="tab-chip !bg-primary !text-primary-foreground disabled:opacity-50"
+                  className="inline-flex items-center gap-1.5 rounded-xl border border-primary/30 bg-primary/10 px-3 py-2 text-sm font-semibold text-primary hover:bg-primary/15 disabled:opacity-40 transition-all"
                   title="Assign Sections A and B"
                 >
-                  {assignSectionsMutation.isPending
-                    ? "Assigning..."
-                    : "Assign Sections"}
+                  {assignSectionsMutation.isPending ? "Assigning…" : "Assign Sections"}
                 </button>
               </div>
             </div>
 
             {/* Desktop table */}
-
-            <div className="hidden sm:block overflow-x-auto rounded-2xl border border-border/60">
+            <div className="hidden sm:block overflow-x-auto">
               <table className="w-full text-sm">
-                <thead className="bg-muted/40">
-                  <tr>
+                <thead>
+                  <tr className="border-b border-border/50">
                     {[
-                      { key: "rank", label: "Rank" },
-
-                      { key: "name", label: "Name" },
-
-                      { key: "roll_no", label: "Roll No" },
-
-                      { key: "reg_no", label: "Reg No" },
-
-                      { key: "batch", label: "Batch" },
-
-                      { key: "section", label: "Sec" },
-
-                      { key: "sem", label: "Sem" },
-
-                      { key: "gpa", label: "GPA" },
-
-                      { key: "attendance", label: "Attn %" },
-
-                      { key: "backlogs", label: "Backlogs" },
+                      { key: "rank",       label: "Rank" },
+                      { key: "name",       label: "Name" },
+                      { key: "roll_no",    label: "Roll No" },
+                      { key: "reg_no",     label: "Reg No" },
+                      { key: "batch",      label: "Batch" },
+                      { key: "section",    label: "Sec" },
+                      { key: "sem",        label: "Sem" },
+                      { key: "gpa",        label: "GPA" },
+                      { key: "attendance", label: "Attendance" },
+                      { key: "backlogs",   label: "Backlogs" },
                     ].map((col) => (
-                      <th key={col.key} className="px-4 py-3 text-left">
+                      <th key={col.key} className="px-5 py-3.5 text-left">
                         <button
                           onClick={() =>
                             ["rank", "name", "roll_no", "reg_no", "gpa", "attendance", "backlogs"].includes(col.key) &&
                             toggleSort(col.key as any)
                           }
-                          className={`flex items-center gap-1 text-[10px] font-black uppercase tracking-widest ${["rank", "name", "roll_no", "reg_no", "gpa", "attendance", "backlogs"].includes(col.key) ? "hover:text-primary transition-colors" : "text-muted-foreground"}`}
+                          className={`flex items-center gap-1 text-[10px] font-black uppercase tracking-[0.14em] ${
+                            ["rank", "name", "roll_no", "reg_no", "gpa", "attendance", "backlogs"].includes(col.key)
+                              ? "text-muted-foreground hover:text-primary transition-colors cursor-pointer"
+                              : "text-muted-foreground/60 cursor-default"
+                          }`}
                         >
                           {col.label}
-
                           {studentSortBy === col.key && (
-                            <span className="text-primary">
-                              {studentSortDir === "asc" ? "↑" : "↓"}
-                            </span>
+                            <span className="text-primary ml-0.5">{studentSortDir === "asc" ? "↑" : "↓"}</span>
                           )}
                         </button>
                       </th>
@@ -3270,92 +3686,114 @@ export default function AdminDashboard() {
                   </tr>
                 </thead>
 
-                <tbody>
+                <tbody className="divide-y divide-border/30">
                   {isStudentsFetching
-                    ? Array.from({ length: 5 }).map((_, i) => (
+                    ? Array.from({ length: 6 }).map((_, i) => (
                         <tr key={i}>
-                          <td colSpan={9} className="px-4 py-8">
-                            <div className="skeleton h-8 w-full" />
+                          <td colSpan={10} className="px-5 py-4">
+                            <div className="skeleton h-9 w-full rounded-xl" />
                           </td>
                         </tr>
                       ))
-                    : studentDirectory?.items.map((item) => (
-                        <tr
-                          key={item.roll_no}
-                          className="border-t border-border/40 hover:bg-muted/30 transition-colors"
-                        >
-                          <td className="px-4 py-4 font-mono font-bold text-primary">
-                            #{item.rank || "-"}
-                          </td>
+                    : studentDirectory?.items.map((item) => {
+                        const gpa = Number(item.average_grade_points);
+                        const attn = Number(item.attendance_percentage);
+                        const gpaColor = gpa >= 8 ? "text-emerald-600" : gpa >= 6 ? "text-foreground" : gpa >= 5 ? "text-amber-600" : "text-rose-600";
+                        const attnColor = attn >= 75 ? "text-emerald-600" : attn >= 65 ? "text-amber-600" : "text-rose-600";
+                        return (
+                          <tr
+                            key={item.roll_no}
+                            className="group hover:bg-muted/25 transition-colors duration-150"
+                          >
+                            <td className="px-5 py-4">
+                              <span className="inline-flex items-center justify-center w-8 h-7 rounded-lg bg-primary/8 text-[11px] font-black text-primary font-mono">
+                                #{item.rank || "-"}
+                              </span>
+                            </td>
 
-                          <td className="px-4 py-4">
-                            <button
-                              onClick={() => setSelectedRollNo(item.roll_no)}
-                              className="flex items-center gap-3 text-left group"
-                            >
-                              <StudentAvatar id={item.id} name={item.name} rollNo={item.roll_no} size="h-8 w-8 text-xs font-bold" />
-                              <div>
-                                <p className="font-semibold group-hover:text-primary leading-tight">
-                                  {item.name}
-                                </p>
+                            <td className="px-5 py-4">
+                              <button
+                                onClick={() => setSelectedRollNo(item.roll_no)}
+                                className="flex items-center gap-3 text-left"
+                              >
+                                <StudentAvatar id={item.id} name={item.name} rollNo={item.roll_no} size="h-9 w-9 text-xs font-bold" />
+                                <div>
+                                  <p className="font-semibold text-foreground group-hover:text-primary transition-colors leading-tight">
+                                    {item.name}
+                                  </p>
+                                  <p className="text-[10px] text-muted-foreground mt-0.5 uppercase tracking-wide">
+                                    {item.email?.split("@")[0]}
+                                  </p>
+                                </div>
+                              </button>
+                            </td>
 
-                                <p className="text-[10px] text-muted-foreground uppercase mt-0.5">
-                                  {item.email?.split("@")[0]}
-                                </p>
+                            <td className="px-5 py-4">
+                              <span className="font-mono text-xs text-muted-foreground">{item.roll_no}</span>
+                            </td>
+
+                            <td className="px-5 py-4">
+                              <span className="font-mono text-xs text-muted-foreground">
+                                {item.reg_no || <span className="opacity-30">—</span>}
+                              </span>
+                            </td>
+
+                            <td className="px-5 py-4">
+                              <span className="inline-flex items-center rounded-lg bg-primary/8 px-2.5 py-1 text-[11px] font-bold text-primary border border-primary/15">
+                                {item.batch}
+                              </span>
+                            </td>
+
+                            <td className="px-5 py-4">
+                              <span className="inline-flex h-6 w-6 items-center justify-center rounded-md bg-muted text-xs font-bold text-muted-foreground">
+                                {item.section || "—"}
+                              </span>
+                            </td>
+
+                            <td className="px-5 py-4 text-sm font-medium text-muted-foreground">
+                              Sem {item.current_semester}
+                            </td>
+
+                            <td className="px-5 py-4">
+                              <span className={`text-sm font-bold tabular-nums ${gpaColor}`}>
+                                {gpa.toFixed(2)}
+                              </span>
+                            </td>
+
+                            <td className="px-5 py-4">
+                              <div className="flex items-center gap-2">
+                                <span className={`text-sm font-semibold tabular-nums ${attnColor}`}>
+                                  {attn.toFixed(1)}%
+                                </span>
+                                <div className="w-14 h-1.5 rounded-full bg-muted overflow-hidden">
+                                  <div
+                                    className={`h-full rounded-full transition-all ${attn >= 75 ? "bg-emerald-500" : attn >= 65 ? "bg-amber-500" : "bg-rose-500"}`}
+                                    style={{ width: `${Math.min(attn, 100)}%` }}
+                                  />
+                                </div>
                               </div>
-                            </button>
-                          </td>
+                            </td>
 
-                          <td className="px-4 py-4 font-mono text-muted-foreground">
-                            {item.roll_no}
-                          </td>
-
-                          <td className="px-4 py-4 font-mono text-muted-foreground">
-                            {item.reg_no || <span className="opacity-40">—</span>}
-                          </td>
-
-                          <td className="px-4 py-4">
-                            <span className="rounded-full bg-muted px-2 py-0.5 text-[10px] font-bold">
-                              {item.batch}
-                            </span>
-                          </td>
-
-                          <td className="px-4 py-4 text-muted-foreground">
-                            {item.section || "-"}
-                          </td>
-
-                          <td className="px-4 py-4 text-muted-foreground">
-                            {item.current_semester}
-                          </td>
-
-                          <td className="px-4 py-4 font-bold">
-                            {Number(item.average_grade_points).toFixed(2)}
-                          </td>
-
-                          <td className="px-4 py-4">
-                            <span
-                              className={`font-medium ${item.attendance_percentage < 75 ? "text-rose-500" : "text-emerald-500"}`}
-                            >
-                              {Number(item.attendance_percentage).toFixed(1)}%
-                            </span>
-                          </td>
-
-                          <td className="px-4 py-4">
-                            <span
-                              className={`font-bold ${item.backlogs > 0 ? "text-rose-500" : "text-muted-foreground"}`}
-                            >
-                              {item.backlogs}
-                            </span>
-                          </td>
-                        </tr>
-                      ))}
+                            <td className="px-5 py-4">
+                              {item.backlogs > 0 ? (
+                                <span className="inline-flex items-center rounded-lg bg-rose-500/10 px-2.5 py-1 text-[11px] font-bold text-rose-600 border border-rose-500/20">
+                                  {item.backlogs} backlog{item.backlogs !== 1 ? "s" : ""}
+                                </span>
+                              ) : (
+                                <span className="inline-flex items-center rounded-lg bg-emerald-500/8 px-2.5 py-1 text-[11px] font-bold text-emerald-600">
+                                  Clear
+                                </span>
+                              )}
+                            </td>
+                          </tr>
+                        );
+                      })}
                 </tbody>
               </table>
             </div>
 
             {/* Mobile card list */}
-
-            <div className="grid gap-3 sm:hidden">
+            <div className="grid gap-3 p-4 sm:hidden">
               {isStudentsFetching
                 ? Array.from({ length: 5 }).map((_, i) => (
                     <div key={i} className="skeleton h-20 rounded-2xl" />
@@ -3369,71 +3807,50 @@ export default function AdminDashboard() {
                       <StudentAvatar id={item.id} name={item.name} rollNo={item.roll_no} size="h-10 w-10 text-sm font-bold" />
                       <div className="min-w-0 flex-1">
                         <div className="flex items-center gap-2">
-                          <span className="text-xs font-mono font-bold text-primary">
-                            #{item.rank || "-"}
-                          </span>
-
-                          <p className="truncate font-semibold group-hover:text-primary transition-colors">
-                            {item.name}
-                          </p>
+                          <span className="text-xs font-mono font-bold text-primary">#{item.rank || "-"}</span>
+                          <p className="truncate font-semibold group-hover:text-primary transition-colors">{item.name}</p>
                         </div>
-
-                        <p className="text-xs text-muted-foreground">
-                          {item.roll_no}
-                          {item.reg_no ? ` / Reg: ${item.reg_no}` : ""}{" "}
-                          | Sem {item.current_semester} |{" "}
-                          <span className="rounded-full bg-muted px-1.5 py-0.5">
-                            {item.batch}
-                          </span>{" "}
-                          | Sec {item.section || "-"}
+                        <p className="text-xs text-muted-foreground mt-0.5">
+                          {item.roll_no} · Sem {item.current_semester} ·{" "}
+                          <span className="rounded-md bg-primary/8 text-primary px-1.5 py-0.5 text-[10px] font-bold">{item.batch}</span>
+                          {item.section ? ` · Sec ${item.section}` : ""}
                         </p>
                       </div>
-
                       <div className="flex shrink-0 flex-col items-end gap-1 text-xs">
-                        <span className="font-bold">
+                        <span className={`font-bold tabular-nums ${Number(item.average_grade_points) >= 7 ? "text-emerald-600" : Number(item.average_grade_points) >= 5 ? "text-amber-600" : "text-rose-600"}`}>
                           {Number(item.average_grade_points).toFixed(2)} GPA
                         </span>
-
-                        <span
-                          className={`font-medium ${item.attendance_percentage < 75 ? "text-rose-500" : "text-emerald-500"}`}
-                        >
+                        <span className={`font-medium tabular-nums ${item.attendance_percentage < 75 ? "text-rose-500" : "text-emerald-500"}`}>
                           {Number(item.attendance_percentage).toFixed(1)}% Attn
                         </span>
-
                         {item.backlogs > 0 && (
-                          <span className="font-bold text-rose-500">
-                            {item.backlogs} backlogs
-                          </span>
+                          <span className="font-bold text-rose-500">{item.backlogs} backlogs</span>
                         )}
                       </div>
                     </button>
                   ))}
             </div>
 
-            <div className="mt-6 flex items-center justify-between">
-              <p className="text-xs text-muted-foreground tracking-wide">
-                Showing {studentDirectory?.items.length || 0} of{" "}
-                {studentDirectory?.pagination.total || 0} total students
+            {/* Pagination footer */}
+            <div className="flex items-center justify-between px-5 py-4 border-t border-border/40 bg-muted/10">
+              <p className="text-xs text-muted-foreground">
+                Showing <span className="font-semibold text-foreground">{studentDirectory?.items.length || 0}</span> of{" "}
+                <span className="font-semibold text-foreground">{studentDirectory?.pagination.total || 0}</span> students
               </p>
-
               <div className="flex gap-2">
                 <button
                   disabled={studentOffset === 0}
                   onClick={() => setStudentOffset((o) => Math.max(0, o - 10))}
-                  className="tab-chip disabled:opacity-30"
+                  className="inline-flex items-center gap-1 rounded-xl border border-border/60 bg-card/80 px-4 py-2 text-sm font-semibold text-foreground hover:bg-muted/50 hover:border-primary/30 disabled:opacity-30 disabled:cursor-not-allowed transition-all"
                 >
-                  Previous
+                  ← Previous
                 </button>
-
                 <button
-                  disabled={
-                    !studentDirectory ||
-                    studentOffset + 10 >= studentDirectory.pagination.total
-                  }
+                  disabled={!studentDirectory || studentOffset + 10 >= studentDirectory.pagination.total}
                   onClick={() => setStudentOffset((o) => o + 10)}
-                  className="tab-chip disabled:opacity-30"
+                  className="inline-flex items-center gap-1 rounded-xl border border-border/60 bg-card/80 px-4 py-2 text-sm font-semibold text-foreground hover:bg-muted/50 hover:border-primary/30 disabled:opacity-30 disabled:cursor-not-allowed transition-all"
                 >
-                  Next
+                  Next →
                 </button>
               </div>
             </div>
