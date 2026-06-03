@@ -3182,7 +3182,7 @@ export default function AdminDashboard() {
         >
           <div className="relative w-full sm:max-w-lg bg-background border border-border rounded-t-2xl sm:rounded-2xl shadow-2xl overflow-hidden max-h-[92vh] flex flex-col">
             {/* Header */}
-            <div className="px-6 py-5 bg-gradient-to-r from-indigo-600 to-violet-600 flex items-start justify-between gap-4 shrink-0">
+            <div className="px-6 py-5 bg-gradient-to-r from-primary to-teal-600 flex items-start justify-between gap-4 shrink-0">
               <div className="flex items-center gap-3">
                 <div className="rounded-xl bg-white/15 p-2.5">
                   <Users size={22} className="text-white" />
@@ -3240,7 +3240,7 @@ export default function AdminDashboard() {
                       setAddStudentResult(null);
                       setAddStudentForm({ roll_no: "", name: "", dob: "", email: "", batch: "", reg_no: "", section: "", current_semester: "" });
                     }}
-                    className="w-full py-2.5 rounded-xl bg-indigo-600 text-white text-sm font-semibold hover:bg-indigo-700 transition-colors"
+                    className="w-full py-2.5 rounded-xl bg-primary text-primary-foreground text-sm font-semibold hover:bg-primary/90 transition-colors"
                   >
                     Add Another Student
                   </button>
@@ -3386,7 +3386,7 @@ export default function AdminDashboard() {
                       if (addStudentForm.current_semester) payload.current_semester = parseInt(addStudentForm.current_semester);
                       createStudentMutation.mutate(payload);
                     }}
-                    className="px-5 py-2 text-sm font-semibold bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors disabled:opacity-40 flex items-center gap-2"
+                    className="px-5 py-2 text-sm font-semibold bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-colors disabled:opacity-40 flex items-center gap-2"
                   >
                     {createStudentMutation.isPending ? (
                       <><RefreshCw size={14} className="animate-spin" /> Creating...</>
