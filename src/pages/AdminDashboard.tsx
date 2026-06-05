@@ -58,6 +58,8 @@ import {
   XCircle,
   Clock,
   Code2,
+  Upload,
+  FileSpreadsheet,
 } from "lucide-react";
 import api from "../api/client";
 import { useAuthStore } from "../store/authStore";
@@ -1689,6 +1691,34 @@ export default function AdminDashboard() {
     },
   });
 
+  const importStudentsMutation = useMutation({
+    mutationFn: async (file: File) => {
+      const formData = new FormData();
+      formData.append("file", file);
+      return api.post("admin/students/import", formData, {
+        headers: {
+          "Content-Type": "multipart/form-data",
+        },
+      });
+    },
+    onSuccess: (response: any) => {
+      const data = response?.data ?? response;
+      setImportResult(data);
+      setAddStudentError("");
+      queryClient.invalidateQueries({ queryKey: ["admin-students-paginated"] });
+      queryClient.invalidateQueries({ queryKey: ["admin-students"] });
+      queryClient.invalidateQueries({ queryKey: ["admin-batches"] });
+      queryClient.invalidateQueries({ queryKey: ["admin-command-center"] });
+    },
+    onError: (error: any) => {
+      const msg =
+        error?.response?.data?.detail ||
+        error?.message ||
+        "Failed to import students";
+      setAddStudentError(typeof msg === "string" ? msg : JSON.stringify(msg));
+    },
+  });
+
   const createStaffMutation = useMutation({
     mutationFn: async (payload: any) => api.post("admin/staff", payload),
     onSuccess: async (response: any) => {
@@ -1949,6 +1979,25 @@ export default function AdminDashboard() {
     batch?: string; section?: string; current_semester?: number;
   } | null>(null);
   const [addStudentError, setAddStudentError] = useState("");
+  const [addStudentMode, setAddStudentMode] = useState<"single" | "bulk">("single");
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [importResult, setImportResult] = useState<{
+    total_records: number;
+    success_count: number;
+    failed_count: number;
+    errors: Array<{ row: number; roll_no?: string; error: string }>;
+  } | null>(null);
+
+  const handleCloseAddStudent = () => {
+    if (createStudentMutation.isPending || importStudentsMutation.isPending) return;
+    setAddStudentOpen(false);
+    setAddStudentResult(null);
+    setImportResult(null);
+    setSelectedFile(null);
+    setAddStudentMode("single");
+    setAddStudentError("");
+    setAddStudentForm({ roll_no: "", name: "", dob: "", email: "", batch: "", reg_no: "", section: "", current_semester: "" });
+  };
 
   // ── Add Batch modal state ────────────────────────────────────────────────────
   const [addBatchOpen, setAddBatchOpen] = useState(false);
@@ -3178,7 +3227,7 @@ export default function AdminDashboard() {
       {addStudentOpen && (
         <div
           className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 bg-black/60 backdrop-blur-sm"
-          onClick={(e) => e.target === e.currentTarget && !createStudentMutation.isPending && setAddStudentOpen(false)}
+          onClick={(e) => e.target === e.currentTarget && handleCloseAddStudent()}
         >
           <div className="relative w-full sm:max-w-lg bg-background border border-border rounded-t-2xl sm:rounded-2xl shadow-2xl overflow-hidden max-h-[92vh] flex flex-col">
             {/* Header */}
@@ -3190,17 +3239,43 @@ export default function AdminDashboard() {
                 <div>
                   <p className="text-[10px] font-black uppercase tracking-[0.22em] text-white/70">Student Management</p>
                   <h2 className="text-xl font-bold text-white leading-tight">
-                    {addStudentResult ? "Student Created!" : "Add New Student"}
+                    {addStudentResult ? "Student Created!" : importResult ? "Import Complete" : "Add Student"}
                   </h2>
                 </div>
               </div>
               <button
-                onClick={() => !createStudentMutation.isPending && setAddStudentOpen(false)}
+                onClick={handleCloseAddStudent}
                 className="mt-0.5 rounded-lg p-1.5 text-white/70 hover:text-white hover:bg-white/10 transition-colors shrink-0"
               >
                 <X size={18} />
               </button>
             </div>
+
+            {/* Mode Switcher Tabs */}
+            {!addStudentResult && !importResult && (
+              <div className="flex border-b border-border shrink-0 px-6 bg-muted/5">
+                <button
+                  onClick={() => { setAddStudentMode("single"); setAddStudentError(""); }}
+                  className={`px-4 py-3 text-sm font-semibold border-b-2 transition-colors -mb-px ${
+                    addStudentMode === "single"
+                      ? "border-primary text-primary"
+                      : "border-transparent text-muted-foreground hover:text-foreground"
+                  }`}
+                >
+                  Single Student
+                </button>
+                <button
+                  onClick={() => { setAddStudentMode("bulk"); setAddStudentError(""); }}
+                  className={`px-4 py-3 text-sm font-semibold border-b-2 transition-colors -mb-px ${
+                    addStudentMode === "bulk"
+                      ? "border-primary text-primary"
+                      : "border-transparent text-muted-foreground hover:text-foreground"
+                  }`}
+                >
+                  Bulk Import (CSV)
+                </button>
+              </div>
+            )}
 
             {/* Body */}
             <div className="p-6 overflow-y-auto flex-1 custom-scrollbar">
@@ -3245,7 +3320,81 @@ export default function AdminDashboard() {
                     Add Another Student
                   </button>
                 </div>
-              ) : (
+              ) : importResult ? (
+                /* Bulk Success/Error state */
+                <div className="space-y-4">
+                  <div className="flex items-center gap-3 p-4 rounded-xl bg-emerald-500/10 border border-emerald-500/20">
+                    <CheckCircle2 size={28} className="text-emerald-500 shrink-0" />
+                    <div>
+                      <h3 className="font-bold text-foreground">Import Processing Completed</h3>
+                      <p className="text-sm text-muted-foreground">CSV file has been processed.</p>
+                    </div>
+                  </div>
+                  
+                  <div className="grid grid-cols-3 gap-3 text-center">
+                    <div className="p-3 rounded-xl bg-muted/10 border border-border/40">
+                      <p className="text-xl font-bold text-foreground">{importResult.total_records}</p>
+                      <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold mt-0.5">Total Rows</p>
+                    </div>
+                    <div className="p-3 rounded-xl bg-emerald-500/10 border border-emerald-500/20">
+                      <p className="text-xl font-bold text-emerald-600">{importResult.success_count}</p>
+                      <p className="text-[10px] uppercase tracking-wider text-emerald-600 font-semibold mt-0.5">Succeeded</p>
+                    </div>
+                    <div className="p-3 rounded-xl bg-rose-500/10 border border-rose-500/20">
+                      <p className="text-xl font-bold text-rose-600">{importResult.failed_count}</p>
+                      <p className="text-[10px] uppercase tracking-wider text-rose-600 font-semibold mt-0.5">Failed</p>
+                    </div>
+                  </div>
+
+                  {importResult.errors && importResult.errors.length > 0 && (
+                    <div className="space-y-2">
+                      <p className="text-xs font-bold uppercase tracking-wider text-rose-500 flex items-center gap-1">
+                        <AlertTriangle size={12} /> Failure Details ({importResult.errors.length})
+                      </p>
+                      <div className="border border-border/60 rounded-xl overflow-hidden max-h-60 overflow-y-auto custom-scrollbar">
+                        <table className="w-full text-left text-xs border-collapse">
+                          <thead>
+                            <tr className="bg-muted/30 border-b border-border/40 font-semibold text-muted-foreground">
+                              <th className="p-2 w-16 text-center">Row</th>
+                              <th className="p-2 w-32">Roll No</th>
+                              <th className="p-2">Error Reason</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {importResult.errors.map((err, idx) => (
+                              <tr key={idx} className="border-b border-border/20 last:border-0 hover:bg-muted/5">
+                                <td className="p-2 font-mono text-center text-muted-foreground">{err.row}</td>
+                                <td className="p-2 font-mono font-bold text-foreground">{err.roll_no || "—"}</td>
+                                <td className="p-2 text-rose-500">{err.error}</td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    </div>
+                  )}
+
+                  {importResult.failed_count > 0 && (
+                    <div className="flex items-start gap-2 p-3 rounded-lg bg-amber-500/5 border border-amber-500/20">
+                      <Info size={13} className="text-amber-500 mt-0.5 shrink-0" />
+                      <p className="text-[11px] text-muted-foreground">
+                        Some records failed due to database uniqueness constraints or formatting. Fix the CSV and re-import remaining records.
+                      </p>
+                    </div>
+                  )}
+
+                  <button
+                    onClick={() => {
+                      setImportResult(null);
+                      setSelectedFile(null);
+                      setAddStudentError("");
+                    }}
+                    className="w-full py-2.5 rounded-xl bg-primary text-primary-foreground text-sm font-semibold hover:bg-primary/90 transition-colors"
+                  >
+                    Import Another CSV
+                  </button>
+                </div>
+              ) : addStudentMode === "single" ? (
                 /* Form state */
                 <div className="space-y-4">
                   {addStudentError && (
@@ -3355,52 +3504,195 @@ export default function AdminDashboard() {
                     </div>
                   </div>
                 </div>
+              ) : (
+                /* CSV import state */
+                <div className="space-y-4">
+                  {addStudentError && (
+                    <div className="flex items-center gap-2 p-3 rounded-lg bg-rose-500/10 border border-rose-500/20 text-rose-500 text-sm">
+                      <XCircle size={15} className="shrink-0" />
+                      {addStudentError}
+                    </div>
+                  )}
+
+                  {!selectedFile ? (
+                    <div
+                      className="border-2 border-dashed border-border/80 hover:border-primary/50 rounded-2xl p-8 text-center cursor-pointer transition-all bg-muted/5 hover:bg-muted/10 group flex flex-col items-center justify-center min-h-[200px]"
+                      onClick={() => document.getElementById("csv-file-input")?.click()}
+                      onDragOver={(e) => e.preventDefault()}
+                      onDrop={(e) => {
+                        e.preventDefault();
+                        const file = e.dataTransfer.files?.[0];
+                        if (file && file.name.endsWith(".csv")) {
+                          setSelectedFile(file);
+                          setAddStudentError("");
+                        } else {
+                          setAddStudentError("Please upload a valid CSV file.");
+                        }
+                      }}
+                    >
+                      <input
+                        id="csv-file-input"
+                        type="file"
+                        accept=".csv"
+                        className="hidden"
+                        onChange={(e) => {
+                          const file = e.target.files?.[0];
+                          if (file) {
+                            setSelectedFile(file);
+                            setAddStudentError("");
+                          }
+                        }}
+                      />
+                      <Upload size={36} className="text-muted-foreground group-hover:text-primary mb-3 transition-colors" />
+                      <p className="font-semibold text-foreground text-sm mb-1">
+                        Click to upload or drag & drop
+                      </p>
+                      <p className="text-xs text-muted-foreground">
+                        CSV files only (max 5MB)
+                      </p>
+                    </div>
+                  ) : (
+                    <div className="flex items-center justify-between p-4 rounded-xl bg-primary/5 border border-primary/20">
+                      <div className="flex items-center gap-3">
+                        <div className="rounded-lg bg-primary/10 p-2">
+                          <FileSpreadsheet className="text-primary" size={24} />
+                        </div>
+                        <div>
+                          <p className="font-bold text-foreground text-sm truncate max-w-[200px] sm:max-w-xs">{selectedFile.name}</p>
+                          <p className="text-xs text-muted-foreground">{(selectedFile.size / 1024).toFixed(1)} KB</p>
+                        </div>
+                      </div>
+                      <button
+                        onClick={() => setSelectedFile(null)}
+                        className="rounded-lg p-1.5 text-muted-foreground hover:text-foreground hover:bg-muted/30 transition-all"
+                      >
+                        <Trash2 size={16} />
+                      </button>
+                    </div>
+                  )}
+
+                  <div className="rounded-xl bg-muted/10 border border-border/50 p-4 space-y-3">
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs font-bold text-foreground uppercase tracking-wider">CSV Structure</span>
+                      <button
+                        onClick={() => {
+                          const csvContent = "roll_no,name,dob,email,batch,reg_no,section,current_semester\n23MCA001,Priya Sharma,2001-05-18,priya@college.edu,2023-2025,REG20230001,A,2\n23MCA002,Rahul Kumar,2000-11-23,rahul@college.edu,2023-2025,REG20230002,B,2";
+                          const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+                          const url = URL.createObjectURL(blob);
+                          const link = document.createElement("a");
+                          link.setAttribute("href", url);
+                          link.setAttribute("download", "student_import_template.csv");
+                          link.style.visibility = 'hidden';
+                          document.body.appendChild(link);
+                          link.click();
+                          document.body.removeChild(link);
+                        }}
+                        className="text-xs text-primary font-semibold hover:underline flex items-center gap-1"
+                      >
+                        <Download size={12} /> Download Template
+                      </button>
+                    </div>
+                    <div className="grid grid-cols-2 gap-2 text-xs">
+                      <div>
+                        <span className="font-bold text-foreground">Required Headers:</span>
+                        <ul className="list-disc pl-4 text-muted-foreground mt-1 space-y-0.5">
+                          <li><code className="font-mono bg-muted/20 px-1 rounded">roll_no</code></li>
+                          <li><code className="font-mono bg-muted/20 px-1 rounded">name</code></li>
+                          <li><code className="font-mono bg-muted/20 px-1 rounded">dob</code> (YYYY-MM-DD or DD/MM/YYYY)</li>
+                        </ul>
+                      </div>
+                      <div>
+                        <span className="font-bold text-foreground">Optional Headers:</span>
+                        <ul className="list-disc pl-4 text-muted-foreground mt-1 space-y-0.5">
+                          <li><code className="font-mono bg-muted/20 px-1 rounded">email</code></li>
+                          <li><code className="font-mono bg-muted/20 px-1 rounded">batch</code></li>
+                          <li><code className="font-mono bg-muted/20 px-1 rounded">reg_no</code></li>
+                          <li><code className="font-mono bg-muted/20 px-1 rounded">section</code></li>
+                          <li><code className="font-mono bg-muted/20 px-1 rounded">current_semester</code></li>
+                        </ul>
+                      </div>
+                    </div>
+                  </div>
+                </div>
               )}
             </div>
 
             {/* Footer */}
-            {!addStudentResult && (
+            {!addStudentResult && !importResult && (
               <div className="px-6 py-4 border-t border-border/50 flex items-center justify-between shrink-0">
-                <p className="text-xs text-muted-foreground">* Required fields</p>
-                <div className="flex gap-2">
-                  <button
-                    onClick={() => setAddStudentOpen(false)}
-                    disabled={createStudentMutation.isPending}
-                    className="px-4 py-2 text-sm font-semibold border border-border/60 rounded-lg hover:bg-muted/30 transition-colors disabled:opacity-50"
-                  >
-                    Cancel
-                  </button>
-                  <button
-                    disabled={createStudentMutation.isPending || !addStudentForm.roll_no.trim() || !addStudentForm.name.trim() || !addStudentForm.dob}
-                    onClick={() => {
-                      setAddStudentError("");
-                      const payload: any = {
-                        roll_no: addStudentForm.roll_no.trim(),
-                        name: addStudentForm.name.trim(),
-                        dob: addStudentForm.dob,
-                      };
-                      if (addStudentForm.email.trim()) payload.email = addStudentForm.email.trim();
-                      if (addStudentForm.batch.trim()) payload.batch = addStudentForm.batch.trim();
-                      if (addStudentForm.reg_no.trim()) payload.reg_no = addStudentForm.reg_no.trim();
-                      if (addStudentForm.section) payload.section = addStudentForm.section;
-                      if (addStudentForm.current_semester) payload.current_semester = parseInt(addStudentForm.current_semester);
-                      createStudentMutation.mutate(payload);
-                    }}
-                    className="px-5 py-2 text-sm font-semibold bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-colors disabled:opacity-40 flex items-center gap-2"
-                  >
-                    {createStudentMutation.isPending ? (
-                      <><RefreshCw size={14} className="animate-spin" /> Creating...</>
-                    ) : (
-                      <><Plus size={14} /> Create Student</>
-                    )}
-                  </button>
-                </div>
+                {addStudentMode === "single" ? (
+                  <>
+                    <p className="text-xs text-muted-foreground">* Required fields</p>
+                    <div className="flex gap-2">
+                      <button
+                        onClick={handleCloseAddStudent}
+                        disabled={createStudentMutation.isPending}
+                        className="px-4 py-2 text-sm font-semibold border border-border/60 rounded-lg hover:bg-muted/30 transition-colors disabled:opacity-50"
+                      >
+                        Cancel
+                      </button>
+                      <button
+                        disabled={createStudentMutation.isPending || !addStudentForm.roll_no.trim() || !addStudentForm.name.trim() || !addStudentForm.dob}
+                        onClick={() => {
+                          setAddStudentError("");
+                          const payload: any = {
+                            roll_no: addStudentForm.roll_no.trim(),
+                            name: addStudentForm.name.trim(),
+                            dob: addStudentForm.dob,
+                          };
+                          if (addStudentForm.email.trim()) payload.email = addStudentForm.email.trim();
+                          if (addStudentForm.batch.trim()) payload.batch = addStudentForm.batch.trim();
+                          if (addStudentForm.reg_no.trim()) payload.reg_no = addStudentForm.reg_no.trim();
+                          if (addStudentForm.section) payload.section = addStudentForm.section;
+                          if (addStudentForm.current_semester) payload.current_semester = parseInt(addStudentForm.current_semester);
+                          createStudentMutation.mutate(payload);
+                        }}
+                        className="px-5 py-2 text-sm font-semibold bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-colors disabled:opacity-40 flex items-center gap-2"
+                      >
+                        {createStudentMutation.isPending ? (
+                          <><RefreshCw size={14} className="animate-spin" /> Creating...</>
+                        ) : (
+                          <><Plus size={14} /> Create Student</>
+                        )}
+                      </button>
+                    </div>
+                  </>
+                ) : (
+                  <>
+                    <p className="text-xs text-muted-foreground"></p>
+                    <div className="flex gap-2">
+                      <button
+                        onClick={handleCloseAddStudent}
+                        disabled={importStudentsMutation.isPending}
+                        className="px-4 py-2 text-sm font-semibold border border-border/60 rounded-lg hover:bg-muted/30 transition-colors disabled:opacity-50"
+                      >
+                        Cancel
+                      </button>
+                      <button
+                        disabled={importStudentsMutation.isPending || !selectedFile}
+                        onClick={() => {
+                          if (selectedFile) {
+                            setAddStudentError("");
+                            importStudentsMutation.mutate(selectedFile);
+                          }
+                        }}
+                        className="px-5 py-2 text-sm font-semibold bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-colors disabled:opacity-40 flex items-center gap-2"
+                      >
+                        {importStudentsMutation.isPending ? (
+                          <><RefreshCw size={14} className="animate-spin" /> Importing...</>
+                        ) : (
+                          <><Upload size={14} /> Import CSV</>
+                        )}
+                      </button>
+                    </div>
+                  </>
+                )}
               </div>
             )}
-            {addStudentResult && (
+            {(addStudentResult || importResult) && (
               <div className="px-6 py-4 border-t border-border/50 flex justify-end shrink-0">
                 <button
-                  onClick={() => setAddStudentOpen(false)}
+                  onClick={handleCloseAddStudent}
                   className="px-5 py-2 text-sm font-semibold bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-colors"
                 >
                   Done
